@@ -1,3 +1,28 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-farm",
+      "description": "Lush green Indian farm fields with mountains in background",
+      "imageUrl": "https://picsum.photos/seed/krishi1/1200/800",
+      "imageHint": "indian farm"
+    },
+    {
+      "id": "disease-tomato",
+      "description": "Tomato leaf with signs of blight",
+      "imageUrl": "https://picsum.photos/seed/crop2/600/400",
+      "imageHint": "crop disease"
+    },
+    {
+      "id": "farmer-portrait",
+      "description": "Smiling Indian farmer in field",
+      "imageUrl": "https://picsum.photos/seed/farmer1/400/400",
+      "imageHint": "indian farmer"
+    },
+    {
+      "id": "carbon-credits",
+      "description": "Forest reforestation or soil health visualization",
+      "imageUrl": "https://picsum.photos/seed/nature1/800/600",
+      "imageHint": "nature forest"
+    }
+  ]
 }
