@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { 
   Map, 
   Coins, 
@@ -19,14 +19,18 @@ import {
   Calculator,
   Calendar,
   Phone,
-  ArrowUpRight,
   MapPin,
   Sparkles,
-  Info
+  Info,
+  User,
+  CreditCard,
+  Camera,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { doc, addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { toast } from "@/hooks/use-toast";
 
 const stateData: Record<string, string[]> = {
   "Maharashtra": ["Wardha", "Nagpur", "Amravati", "Yavatmal", "Pune", "Nashik", "Aurangabad", "Solapur"],
@@ -44,8 +48,14 @@ const stateBaseRates: Record<string, number> = {
   "Andhra Pradesh": 9200
 };
 
-// High demand districts get a 20% premium
 const highDemandDistricts = ["Wardha", "Nagpur", "Indore", "Jaipur", "Visakhapatnam"];
+
+// Unit conversion relative to 1 Acre
+const unitMultipliers: Record<string, number> = {
+  "acre": 1,
+  "bigha": 0.625, // 1 Bigha = 0.625 Acre (Standard approx)
+  "biswa": 0.03125 // 1 Biswa = 1/20 Bigha = 0.03125 Acre
+};
 
 export default function LeaseLandPage() {
   const { user } = useUser();
@@ -63,12 +73,15 @@ export default function LeaseLandPage() {
     district: "Wardha",
     village: "",
     pincode: "",
-    acres: 5,
+    area: 5,
+    unit: "acre",
     soil: "black",
     irrigation: "yes"
   });
 
   const [result, setResult] = useState<any>(null);
+  const [isApplyOpen, setIsApplyOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -84,26 +97,30 @@ export default function LeaseLandPage() {
 
   const handleCalculate = () => {
     const base = stateBaseRates[calcData.state] || 8000;
+    const acresEquivalent = calcData.area * unitMultipliers[calcData.unit];
     
-    // District Multiplier
     const isHighDemand = highDemandDistricts.includes(calcData.district);
     const districtPremium = isHighDemand ? 0.2 : 0;
     
-    // Quality Bonuses
     const irrigationBonus = calcData.irrigation === "yes" ? 2500 : calcData.irrigation === "partial" ? 1200 : 0;
     const soilBonus = calcData.soil === "black" ? 1800 : calcData.soil === "alluvial" ? 1000 : 0;
     
     const baseRateWithDistrict = base * (1 + districtPremium);
     const ratePerAcre = baseRateWithDistrict + irrigationBonus + soilBonus;
-    const total = ratePerAcre * calcData.acres;
+    
+    // Convert rate back to local unit for display
+    const ratePerUnit = ratePerAcre * unitMultipliers[calcData.unit];
+    const total = ratePerUnit * calcData.area;
 
     setResult({
-      rate: Math.round(ratePerAcre),
+      rate: Math.round(ratePerUnit),
       total: Math.round(total),
       base: base,
       districtBonus: Math.round(base * districtPremium),
       qualityBonus: irrigationBonus + soilBonus,
-      demandStatus: isHighDemand ? "High" : "Standard"
+      demandStatus: isHighDemand ? "High" : "Standard",
+      unit: calcData.unit,
+      area: calcData.area
     });
   };
 
@@ -116,6 +133,48 @@ export default function LeaseLandPage() {
         village: profile.village || "",
         pincode: profile.pincode || ""
       }));
+    }
+  };
+
+  const handleApplySubmission = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!db || !user) return;
+    setIsSubmitting(true);
+
+    const formData = new FormData(e.currentTarget);
+    const application = {
+      userId: user.uid,
+      farmerName: formData.get("farmerName"),
+      aadharNumber: formData.get("aadharNumber"),
+      phone: formData.get("phone"),
+      bankName: formData.get("bankName"),
+      accountNumber: formData.get("accountNumber"),
+      ifscCode: formData.get("ifscCode"),
+      landDetails: {
+        ...calcData,
+        calculatedRate: result?.rate || 0,
+        totalPayout: result?.total || 0
+      },
+      status: "Pending Inspection",
+      createdAt: serverTimestamp()
+    };
+
+    try {
+      await addDoc(collection(db, "leaseApplications"), application);
+      toast({
+        title: "Application Submitted!",
+        description: "Our field monitor will contact you within 48 hours for inspection.",
+      });
+      setIsApplyOpen(false);
+    } catch (error) {
+      console.error("Apply error:", error);
+      toast({
+        variant: "destructive",
+        title: "Submission Failed",
+        description: "Please check your network and try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -137,7 +196,11 @@ export default function LeaseLandPage() {
             Join the KrishiMitra Land Lease program. We farm your land organically, you get a fixed annual rent. Zero risk, better soil, monthly updates.
           </p>
           <div className="flex flex-wrap gap-4 pt-4">
-            <Button size="lg" className="rounded-2xl h-16 px-10 font-black bg-primary text-white hover:bg-primary/90 shadow-xl shadow-primary/20 text-lg transition-all hover:scale-105">
+            <Button 
+              size="lg" 
+              className="rounded-2xl h-16 px-10 font-black bg-primary text-white hover:bg-primary/90 shadow-xl shadow-primary/20 text-lg transition-all hover:scale-105"
+              onClick={() => setIsApplyOpen(true)}
+            >
               Apply Now <ArrowRight className="ml-2 h-6 w-6" />
             </Button>
             <Button variant="outline" size="lg" className="rounded-2xl h-16 px-10 font-black border-2 border-white/20 text-white hover:bg-white/10 text-lg">
@@ -209,39 +272,31 @@ export default function LeaseLandPage() {
                   </SelectContent>
                 </Select>
               </div>
+              
               <div className="space-y-3">
-                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Village</Label>
-                <Input 
-                  value={calcData.village} 
-                  onChange={(e) => setCalcData({...calcData, village: e.target.value})} 
-                  placeholder="e.g. Anji"
-                  className="rounded-2xl h-14 bg-muted/30 border-none font-bold text-lg" 
-                />
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Land Unit</Label>
+                <Select value={calcData.unit} onValueChange={(v) => setCalcData({...calcData, unit: v})}>
+                  <SelectTrigger className="rounded-2xl h-14 bg-muted/30 border-none font-bold text-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl border-none shadow-2xl">
+                    <SelectItem value="acre">Acre</SelectItem>
+                    <SelectItem value="bigha">Bigha</SelectItem>
+                    <SelectItem value="biswa">Biswa</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+
               <div className="space-y-3">
-                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Pincode</Label>
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Area ({calcData.unit})</Label>
                 <Input 
                   type="number"
-                  value={calcData.pincode} 
-                  onChange={(e) => setCalcData({...calcData, pincode: e.target.value})} 
-                  placeholder="442XXX"
+                  value={calcData.area} 
+                  onChange={(e) => setCalcData({...calcData, area: Number(e.target.value)})}
                   className="rounded-2xl h-14 bg-muted/30 border-none font-bold text-lg" 
                 />
               </div>
-              <div className="space-y-3">
-                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Land Size (Acres)</Label>
-                <div className="flex items-center gap-4 bg-muted/30 rounded-2xl p-2 px-4 h-14">
-                  <input 
-                    type="range" 
-                    min="1" 
-                    max="50" 
-                    value={calcData.acres} 
-                    onChange={(e) => setCalcData({...calcData, acres: Number(e.target.value)})}
-                    className="flex-1 accent-primary" 
-                  />
-                  <span className="font-black text-xl w-12 text-center">{calcData.acres}</span>
-                </div>
-              </div>
+
               <div className="space-y-3">
                 <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Soil Type</Label>
                 <Select value={calcData.soil} onValueChange={(v) => setCalcData({...calcData, soil: v})}>
@@ -282,53 +337,102 @@ export default function LeaseLandPage() {
             {result && (
               <div className="pt-10 border-t space-y-6 animate-in fade-in slide-in-from-top-4 duration-700">
                 <div className="bg-emerald-50 p-10 rounded-[2.5rem] border border-emerald-100 flex flex-col md:flex-row justify-between items-center gap-8 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-8 opacity-5">
-                    <CheckCircle2 className="h-40 w-40" />
-                  </div>
                   <div className="relative z-10">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700/60 mb-2 flex items-center gap-2">
-                      <MapPin className="h-3 w-3" /> {calcData.district}, {calcData.state}
-                    </p>
                     <p className="text-xs font-black uppercase tracking-widest text-emerald-700/60 mb-1">Aapki Zameen Ka Rate</p>
-                    <h3 className="text-5xl font-black text-emerald-700">₹{result.rate.toLocaleString()}<span className="text-sm font-medium">/acre/year</span></h3>
+                    <h3 className="text-5xl font-black text-emerald-700">₹{result.rate.toLocaleString()}<span className="text-sm font-medium">/{result.unit}/year</span></h3>
                   </div>
                   <div className="text-center md:text-right relative z-10">
                     <p className="text-xs font-black uppercase tracking-widest text-emerald-700/60 mb-1">Total Annual Guaranteed Payout</p>
                     <p className="text-4xl font-black text-emerald-700">₹{result.total.toLocaleString()}</p>
-                    <Badge className={cn("mt-3 px-4 py-1.5 rounded-full font-bold border-none", result.demandStatus === 'High' ? 'bg-emerald-600' : 'bg-emerald-400')}>
-                      {result.demandStatus} Demand Zone
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-6 bg-muted/20 rounded-3xl border border-muted/30">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">State Base</p>
-                    <p className="text-xl font-bold">₹{result.base.toLocaleString()}</p>
-                  </div>
-                  <div className="p-6 bg-muted/20 rounded-3xl border border-muted/30">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Regional Premium</p>
-                    <p className="text-xl font-bold text-primary">+₹{result.districtBonus.toLocaleString()}</p>
-                  </div>
-                  <div className="p-6 bg-muted/20 rounded-3xl border border-muted/30">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Quality Bonuses</p>
-                    <p className="text-xl font-bold text-primary">+₹{result.qualityBonus.toLocaleString()}</p>
-                  </div>
-                </div>
-
-                <div className="bg-amber-50 p-6 rounded-[2rem] border border-amber-200 flex gap-4 items-start">
-                  <Info className="h-6 w-6 text-amber-600 shrink-0 mt-1" />
-                  <div className="space-y-1">
-                    <h5 className="font-black text-amber-900">Why KrishiAI Lease?</h5>
-                    <p className="text-sm text-amber-800 leading-relaxed font-medium">
-                      Traditional farming has a 40% risk factor due to pests and weather. Our lease model offers 100% security — your rent is fixed and paid before we start the season.
-                    </p>
+                    <Button 
+                      className="mt-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 h-12 px-8 font-black shadow-lg"
+                      onClick={() => setIsApplyOpen(true)}
+                    >
+                      Apply with this Offer
+                    </Button>
                   </div>
                 </div>
               </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Application Dialog */}
+        <Dialog open={isApplyOpen} onOpenChange={setIsApplyOpen}>
+          <DialogContent className="max-w-3xl rounded-[2.5rem] p-0 overflow-hidden border-none bg-white">
+            <form onSubmit={handleApplySubmission}>
+              <div className="p-8 bg-primary text-white space-y-2">
+                <DialogTitle className="text-3xl font-black">Lease Application Form</DialogTitle>
+                <DialogDescription className="text-primary-foreground/80 font-medium">
+                  Please provide your identity and banking details for automated rent payouts.
+                </DialogDescription>
+              </div>
+              <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-8 max-h-[60vh] overflow-y-auto">
+                <div className="space-y-6">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                    <User className="h-4 w-4" /> Personal Information
+                  </h4>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase tracking-tight">Full Farmer Name (as per Aadhar)</Label>
+                      <Input name="farmerName" defaultValue={profile?.name} required className="rounded-xl h-12 bg-muted/30 border-none font-bold" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase tracking-tight">Aadhar Number</Label>
+                      <Input name="aadharNumber" placeholder="XXXX XXXX XXXX" required className="rounded-xl h-12 bg-muted/30 border-none font-bold" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase tracking-tight">Contact Phone</Label>
+                      <Input name="phone" defaultValue={profile?.phone} required className="rounded-xl h-12 bg-muted/30 border-none font-bold" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" /> Banking Details
+                  </h4>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase tracking-tight">Bank Name</Label>
+                      <Input name="bankName" placeholder="e.g. SBI, HDFC" required className="rounded-xl h-12 bg-muted/30 border-none font-bold" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase tracking-tight">Account Number</Label>
+                      <Input name="accountNumber" type="password" required className="rounded-xl h-12 bg-muted/30 border-none font-bold" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase tracking-tight">IFSC Code</Label>
+                      <Input name="ifscCode" placeholder="SBIN00XXXXX" required className="rounded-xl h-12 bg-muted/30 border-none font-bold" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 space-y-4 pt-4 border-t">
+                  <div className="flex items-center gap-6 p-6 bg-muted/20 rounded-2xl border-2 border-dashed border-muted">
+                    <div className="h-16 w-16 bg-white rounded-2xl flex items-center justify-center text-muted-foreground shadow-sm">
+                      <Camera className="h-8 w-8" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold">Landowner Profile Photo</p>
+                      <p className="text-xs text-muted-foreground">Used for field monitor identification</p>
+                      <Input type="file" accept="image/*" className="mt-2 text-xs" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter className="p-10 pt-0 flex flex-col sm:flex-row gap-4">
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="w-full rounded-2xl h-14 text-lg font-black shadow-xl shadow-primary/20"
+                >
+                  {isSubmitting ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : "Submit Application"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         {/* My Active Leases & Status */}
         <div className="space-y-8">
@@ -364,27 +468,6 @@ export default function LeaseLandPage() {
                 </div>
               </div>
 
-              <div className="space-y-6">
-                <h5 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground border-b pb-4">Advance Rent Credits</h5>
-                <div className="space-y-4">
-                  {[
-                    { date: "Oct 12, 2024", amount: "₹23,625", ref: "TXN...847", status: "Credited" },
-                    { date: "Jun 05, 2024", amount: "₹23,625", ref: "TXN...212", status: "Credited" },
-                  ].map((row, i) => (
-                    <div key={i} className="flex justify-between items-center p-4 rounded-2xl bg-muted/10">
-                      <div>
-                        <p className="text-sm font-black">{row.date}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase">{row.ref}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xl font-black text-primary">{row.amount}</p>
-                        <p className="text-[10px] text-emerald-500 font-bold uppercase">{row.status}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               <Button variant="outline" className="w-full rounded-2xl h-14 text-lg font-black border-2 border-primary/20 text-primary hover:bg-primary/5">
                 Download Registered Agreement
               </Button>
@@ -415,4 +498,3 @@ export default function LeaseLandPage() {
     </div>
   );
 }
-
