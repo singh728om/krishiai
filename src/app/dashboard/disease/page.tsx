@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -6,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Camera, Upload, Loader2, CheckCircle2, AlertTriangle, MapPin, History, BrainCircuit, Bug, ChevronRight } from "lucide-react";
+import { Camera, Upload, Loader2, CheckCircle2, AlertTriangle, MapPin, History, BrainCircuit, Bug, ChevronRight, Pill, ShieldAlert } from "lucide-react";
 import { cropDiseaseDiagnosis, type CropDiseaseDiagnosisOutput } from "@/ai/flows/crop-disease-diagnosis";
 import { toast } from "@/hooks/use-toast";
 import Image from "next/image";
@@ -40,6 +39,7 @@ export default function DiseaseDetectionPage() {
       });
       setResult(response);
     } catch (error) {
+      console.error("Diagnosis error:", error);
       toast({
         title: "Diagnosis failed",
         description: "There was an error analyzing the crop image. Please try again.",
@@ -55,7 +55,7 @@ export default function DiseaseDetectionPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-headline font-bold">Crop Disease Detection</h1>
-          <p className="text-muted-foreground">Upload a photo for instant diagnosis and treatment plan.</p>
+          <p className="text-muted-foreground">Upload a photo for instant AI diagnosis and treatment plan.</p>
         </div>
         <Button variant="outline" className="rounded-xl">
           <History className="mr-2 h-4 w-4" /> View Scan History
@@ -99,9 +99,9 @@ export default function DiseaseDetectionPage() {
         </Card>
 
         {/* Results Card */}
-        <Card className="rounded-2xl border-none shadow-sm overflow-hidden min-h-[400px]">
+        <Card className="rounded-2xl border-none shadow-sm overflow-hidden min-h-[400px] flex flex-col">
           {isAnalyzing ? (
-            <div className="h-full flex flex-col items-center justify-center p-8 space-y-6">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-6">
               <div className="relative h-24 w-24">
                 <div className="absolute inset-0 rounded-full border-4 border-primary/20" />
                 <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
@@ -109,15 +109,14 @@ export default function DiseaseDetectionPage() {
               </div>
               <div className="text-center space-y-2">
                 <h3 className="text-xl font-bold">Analyzing Pathology...</h3>
-                <p className="text-sm text-muted-foreground italic">Checking against 50,000+ disease patterns</p>
+                <p className="text-sm text-muted-foreground italic">Gemini AI comparing symptoms...</p>
               </div>
               <div className="w-full space-y-2">
                 <Progress value={45} className="h-2" />
-                <p className="text-[10px] text-center font-bold text-muted-foreground uppercase">Identifying symptoms</p>
               </div>
             </div>
           ) : result ? (
-            <div className="p-0">
+            <div className="flex-1 flex flex-col">
               <div className="p-6 bg-primary/5 border-b">
                 <div className="flex justify-between items-start mb-4">
                   <div>
@@ -142,42 +141,51 @@ export default function DiseaseDetectionPage() {
                   <Progress value={result.affectedAreaPercentage} className="h-2" />
                 </div>
               </div>
-              <div className="p-6 space-y-6">
-                <div>
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-primary" /> Recommended Treatment
-                  </h3>
-                  <div className="bg-muted/30 rounded-xl p-4 border border-dashed border-primary/30">
-                    <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                      {result.treatmentRecommendation}
-                    </p>
+              
+              <div className="p-6 space-y-6 flex-1 overflow-auto">
+                <div className="grid grid-cols-1 gap-4">
+                  {/* Medicines */}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                      <Pill className="h-4 w-4 text-red-500" /> Recommended Medicines
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {result.treatmentMedicines.map((med, i) => (
+                        <Badge key={i} variant="secondary" className="px-3 py-1 bg-red-50 text-red-700 border-red-100">
+                          {med}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-accent" /> Nearby Agro-Dealers
-                  </h3>
-                  <div className="space-y-3">
-                    {[
-                      { name: "Kisan Suvidha Kendra", dist: "2.4 km", status: "Open Now" },
-                      { name: "Varuna Agro Solutions", dist: "5.1 km", status: "Closes 6 PM" },
-                    ].map((dealer, i) => (
-                      <div key={i} className="flex justify-between items-center p-3 rounded-xl border bg-white hover:border-primary transition-colors cursor-pointer group">
-                        <div>
-                          <p className="text-sm font-bold group-hover:text-primary">{dealer.name}</p>
-                          <p className="text-xs text-muted-foreground">{dealer.dist} • {dealer.status}</p>
-                        </div>
-                        <Button size="icon" variant="ghost" className="rounded-full">
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
+
+                  {/* Precautions */}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                      <ShieldAlert className="h-4 w-4 text-blue-500" /> Preventative Measures
+                    </h3>
+                    <ul className="space-y-1 text-sm list-disc pl-5">
+                      {result.precautions.map((prec, i) => (
+                        <li key={i} className="text-muted-foreground">{prec}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Summary */}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-primary" /> Action Plan
+                    </h3>
+                    <div className="bg-muted/30 rounded-xl p-4 border border-dashed border-primary/30">
+                      <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                        {result.detailedAdvice}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
+            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
               <div className="p-4 bg-muted/50 rounded-full mb-4">
                 <AlertTriangle className="h-12 w-12" />
               </div>
@@ -188,30 +196,27 @@ export default function DiseaseDetectionPage() {
         </Card>
       </div>
 
-      {/* History Table */}
+      {/* Agro-Dealers (Simulated) */}
       <Card className="rounded-2xl border-none shadow-sm overflow-hidden">
         <CardHeader className="px-6 py-4 border-b">
-          <CardTitle className="text-lg">Recent Scans</CardTitle>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-accent" /> Nearby Agro-Dealers for Medicines
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y">
             {[
-              { date: "Oct 24, 2024", crop: "Soybean", disease: "Rust", severity: "Mild", area: "12%" },
-              { date: "Sep 12, 2024", crop: "Cotton", disease: "Alternaria Leaf Spot", severity: "Moderate", area: "24%" },
-            ].map((scan, i) => (
+              { name: "Kisan Suvidha Kendra", dist: "2.4 km", status: "Open Now", phone: "+91 98XXX XXXX1" },
+              { name: "Varuna Agro Solutions", dist: "5.1 km", status: "Closes 6 PM", phone: "+91 98XXX XXXX2" },
+            ].map((dealer, i) => (
               <div key={i} className="flex items-center justify-between p-4 px-6 hover:bg-muted/30 transition-colors">
-                <div className="flex gap-4 items-center">
-                  <div className="h-10 w-10 bg-muted/50 rounded-lg flex items-center justify-center">
-                    <Bug className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold">{scan.disease} — {scan.crop}</p>
-                    <p className="text-xs text-muted-foreground">{scan.date} • {scan.area} Affected</p>
-                  </div>
+                <div>
+                  <p className="text-sm font-bold">{dealer.name}</p>
+                  <p className="text-xs text-muted-foreground">{dealer.dist} • {dealer.status}</p>
                 </div>
-                <Badge variant={scan.severity === 'Mild' ? 'secondary' : 'default'} className="rounded-lg">
-                  {scan.severity}
-                </Badge>
+                <Button size="sm" variant="outline" className="rounded-lg h-8">
+                  Call Now
+                </Button>
               </div>
             ))}
           </div>

@@ -17,4 +17,53 @@ const YieldImprovementAdvisoryInputSchema = z.object({
   irrigationType: z
     .string()
     .describe('The type of irrigation used (e.g., drip, sprinkler, rainfed).'),
-  sowingDate: z.string().describe('The date when the crop was sown (e.g., 
+  sowingDate: z.string().describe('The date when the crop was sown.'),
+});
+export type YieldImprovementAdvisoryInput = z.infer<typeof YieldImprovementAdvisoryInputSchema>;
+
+const YieldImprovementAdvisoryOutputSchema = z.object({
+  predictedYieldRange: z.string().describe('The estimated yield per acre.'),
+  advisorySteps: z.array(z.object({
+    title: z.string(),
+    description: z.string()
+  })).describe('Actionable steps to improve yield.'),
+  environmentalAnalysis: z.string().describe('Brief analysis of soil and irrigation compatibility.')
+});
+export type YieldImprovementAdvisoryOutput = z.infer<typeof YieldImprovementAdvisoryOutputSchema>;
+
+export async function yieldImprovementAdvisory(input: YieldImprovementAdvisoryInput): Promise<YieldImprovementAdvisoryOutput> {
+  return yieldImprovementAdvisoryFlow(input);
+}
+
+const prompt = ai.definePrompt({
+  name: 'yieldImprovementAdvisoryPrompt',
+  input: {schema: YieldImprovementAdvisoryInputSchema},
+  output: {schema: YieldImprovementAdvisoryOutputSchema},
+  prompt: `You are an expert agronomist. Based on the following farm data, provide a yield improvement plan.
+
+Crop: {{{cropType}}}
+Acreage: {{{acreage}}} acres
+Soil: {{{soilType}}}
+Irrigation: {{{irrigationType}}}
+Sowing Date: {{{sowingDate}}}
+
+Provide:
+1. A realistic predicted yield range.
+2. 3-5 Actionable steps for the farmer to maximize yield.
+3. Analysis of how soil and irrigation impact this specific crop.`,
+});
+
+const yieldImprovementAdvisoryFlow = ai.defineFlow(
+  {
+    name: 'yieldImprovementAdvisoryFlow',
+    inputSchema: YieldImprovementAdvisoryInputSchema,
+    outputSchema: YieldImprovementAdvisoryOutputSchema,
+  },
+  async input => {
+    const {output} = await prompt(input);
+    if (!output) {
+      throw new Error('Failed to get advisory from AI.');
+    }
+    return output;
+  }
+);

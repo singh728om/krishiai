@@ -27,9 +27,9 @@ const CropDiseaseDiagnosisOutputSchema = z.object({
   confidenceScore: z.number().min(0).max(100).describe('Confidence score of the diagnosis (0-100%).'),
   severity: z.enum(['Mild', 'Moderate', 'Severe']).describe('The severity of the disease.'),
   affectedAreaPercentage: z.number().min(0).max(100).describe('The estimated percentage of the crop area affected by the disease (0-100%).'),
-  treatmentRecommendation: z
-    .string()
-    .describe('A detailed, actionable treatment recommendation in the specified vernacular language.'),
+  treatmentMedicines: z.array(z.string()).describe('List of specific medicines or chemicals recommended for treatment.'),
+  precautions: z.array(z.string()).describe('List of preventative measures and precautions to take.'),
+  detailedAdvice: z.string().describe('Comprehensive actionable advice in the specified language.')
 });
 export type CropDiseaseDiagnosisOutput = z.infer<typeof CropDiseaseDiagnosisOutputSchema>;
 
@@ -41,20 +41,18 @@ const prompt = ai.definePrompt({
   name: 'cropDiseaseDiagnosisPrompt',
   input: {schema: CropDiseaseDiagnosisInputSchema},
   output: {schema: CropDiseaseDiagnosisOutputSchema},
-  prompt: `You are an expert agricultural diagnostician for KrishiAI, specializing in Indian crops and diseases. Your task is to analyze the provided crop photo and description to accurately identify any diseases, assess their severity, and provide actionable treatment recommendations.
+  prompt: `You are an expert agricultural pathologist for KrishiAI, specializing in Indian crops. 
 
-Analyze the following crop image and information:
+Analyze this crop photo: {{media url=photoDataUri}}
 
-Photo: {{media url=photoDataUri}}
+Your task:
+1. Identify the disease if present.
+2. Provide a confidence score.
+3. List specific medicines/fungicides/pesticides (treatmentMedicines).
+4. List long-term precautions to prevent recurrence (precautions).
+5. Provide a summary of actionable steps (detailedAdvice) in the language: {{{language}}}.
 
-Based on your analysis, provide a precise diagnosis including:
-1. The common name of the disease.
-2. A confidence score for your diagnosis.
-3. The severity of the disease (Mild, Moderate, or Severe).
-4. The estimated percentage of the crop area affected.
-5. A detailed, actionable treatment recommendation tailored to the disease and severity. The recommendation MUST be provided in the following language: {{{language}}}.
-
-Ensure your response is structured exactly according to the output schema requirements.`,
+If the photo is not of a crop, identify that and set diseaseName to "Not a Crop".`,
 });
 
 const cropDiseaseDiagnosisFlow = ai.defineFlow(
