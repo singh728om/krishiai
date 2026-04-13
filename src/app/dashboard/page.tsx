@@ -19,34 +19,49 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-
-const stats = [
-  { label: "Crop Health Score", value: "88", sub: "Excellent", color: "text-primary", trend: "+4%", icon: BrainCircuit },
-  { label: "Yield Forecast", value: "8.2", sub: "Quintals/Acre", color: "text-primary", trend: "+15%", icon: ArrowUpRight },
-  { label: "Carbon Credits", value: "12.4", sub: "Tonnes Sequestered", color: "text-blue-600", trend: "+2.1", icon: Coins },
-  { label: "Season P&L", value: "₹1,24,500", sub: "Projected Profit", color: "text-primary", trend: "+12k", icon: ArrowUpRight },
-];
+import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
+import { doc } from "firebase/firestore";
 
 export default function Dashboard() {
+  const { user } = useUser();
+  const db = useFirestore();
+  
+  const userRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, "users", user.uid);
+  }, [db, user?.uid]);
+
+  const { data: profile } = useDoc(userRef);
+  const isHindi = profile?.languagePreference === 'hindi';
+
+  const stats = [
+    { label: isHindi ? "फसल स्वास्थ्य" : "Crop Health Score", value: "88", sub: isHindi ? "उत्कृष्ट" : "Excellent", color: "text-primary", trend: "+4%", icon: BrainCircuit },
+    { label: isHindi ? "उपज का अनुमान" : "Yield Forecast", value: "8.2", sub: isHindi ? "क्विंटल/एकड़" : "Quintals/Acre", color: "text-primary", trend: "+15%", icon: ArrowUpRight },
+    { label: isHindi ? "कार्बन क्रेडिट" : "Carbon Credits", value: "12.4", sub: isHindi ? "टन कार्बन" : "Tonnes Sequestered", color: "text-blue-600", trend: "+2.1", icon: Coins },
+    { label: isHindi ? "सीजन का लाभ" : "Season P&L", value: "₹1,24,500", sub: isHindi ? "अनुमानित" : "Projected Profit", color: "text-primary", trend: "+12k", icon: ArrowUpRight },
+  ];
+
   return (
     <div className="space-y-8">
-      {/* Header Info */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-headline font-bold">Welcome back, Farmer</h1>
-          <p className="text-muted-foreground">Here's what's happening at your farm in Wardha today.</p>
+          <h1 className="text-3xl font-headline font-bold">
+            {isHindi ? `नमस्ते, ${profile?.name || 'किसान'}` : `Welcome back, ${profile?.name || 'Farmer'}`}
+          </h1>
+          <p className="text-muted-foreground">
+            {isHindi ? 'यहाँ आपके खेत (वर्धा) की आज की जानकारी है।' : "Here's what's happening at your farm in Wardha today."}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <Button className="rounded-xl shadow-lg shadow-primary/20">
-            <Plus className="mr-2 h-4 w-4" /> Add Field Record
+            <Plus className="mr-2 h-4 w-4" /> {isHindi ? 'नया रिकॉर्ड' : 'Add Field Record'}
           </Button>
           <Button variant="outline" className="rounded-xl">
-            <Calendar className="mr-2 h-4 w-4" /> Aug 12 - Sep 11
+            <Calendar className="mr-2 h-4 w-4" /> {isHindi ? 'सितंबर 2024' : 'Aug 12 - Sep 11'}
           </Button>
         </div>
       </div>
 
-      {/* Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, i) => (
           <Card key={i} className="rounded-2xl border-none shadow-sm hover:shadow-md transition-all">
@@ -72,15 +87,14 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Crop Health Map */}
         <Card className="lg:col-span-2 rounded-2xl border-none shadow-sm overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between bg-white border-b px-6 py-4">
             <div>
-              <CardTitle className="text-lg">Crop Health Map</CardTitle>
-              <p className="text-xs text-muted-foreground">Live satellite analysis of Field A (Cotton)</p>
+              <CardTitle className="text-lg">{isHindi ? 'फसल स्वास्थ्य मानचित्र' : 'Crop Health Map'}</CardTitle>
+              <p className="text-xs text-muted-foreground">{isHindi ? 'खेत ए (कपास) का विश्लेषण' : 'Live satellite analysis of Field A (Cotton)'}</p>
             </div>
             <div className="flex gap-2">
-              <Badge className="bg-emerald-500">92% Optimal</Badge>
+              <Badge className="bg-emerald-500">{isHindi ? '92% इष्टतम' : '92% Optimal'}</Badge>
             </div>
           </CardHeader>
           <CardContent className="p-6">
@@ -94,30 +108,22 @@ export default function Dashboard() {
                   <div 
                     key={i} 
                     className={`${colorClass} rounded-sm opacity-80 hover:opacity-100 transition-opacity cursor-pointer`}
-                    title={`Zone ${i + 1}: Health Score ${Math.floor(Math.random() * 20) + 80}%`}
                   />
                 );
               })}
             </div>
-            <div className="mt-6 flex flex-wrap gap-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              <div className="flex items-center gap-1.5"><div className="h-3 w-3 rounded-sm bg-emerald-500" /> Healthy</div>
-              <div className="flex items-center gap-1.5"><div className="h-3 w-3 rounded-sm bg-amber-400" /> Warning</div>
-              <div className="flex items-center gap-1.5"><div className="h-3 w-3 rounded-sm bg-red-500" /> Critical</div>
-            </div>
           </CardContent>
         </Card>
 
-        {/* Recent Alerts */}
         <Card className="rounded-2xl border-none shadow-sm">
           <CardHeader className="border-b px-6 py-4">
-            <CardTitle className="text-lg">Recent Alerts</CardTitle>
+            <CardTitle className="text-lg">{isHindi ? 'महत्वपूर्ण अलर्ट' : 'Recent Alerts'}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y">
               {[
-                { title: "Disease Warning", desc: "Early signs of Alternaria Leaf Spot detected in South Zone.", type: "warning", time: "2h ago" },
-                { title: "Price Alert", desc: "Cotton prices in Nagpur Mandi rose by ₹200/quintal.", type: "info", time: "5h ago" },
-                { title: "Weather Alert", desc: "Heavy rain expected in Wardha within 48 hours. Secure harvest.", type: "critical", time: "1d ago" },
+                { title: isHindi ? "रोग चेतावनी" : "Disease Warning", desc: isHindi ? "दक्षिण क्षेत्र में पत्तियों के धब्बे देखे गए।" : "Early signs of Alternaria Leaf Spot detected.", type: "warning", time: "2h ago" },
+                { title: isHindi ? "बाजार अलर्ट" : "Price Alert", desc: isHindi ? "नागपुर मंडी में कपास के भाव ₹200 बढ़े।" : "Cotton prices in Nagpur Mandi rose by ₹200.", type: "info", time: "5h ago" },
               ].map((alert, i) => (
                 <div key={i} className="p-4 hover:bg-muted/30 transition-colors flex gap-4">
                   <div className={cn(
@@ -125,30 +131,23 @@ export default function Dashboard() {
                     alert.type === 'critical' ? 'bg-red-500' : alert.type === 'warning' ? 'bg-accent' : 'bg-blue-500'
                   )} />
                   <div className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs font-bold uppercase tracking-tight">{alert.title}</p>
-                      <span className="text-[10px] text-muted-foreground">{alert.time}</span>
-                    </div>
+                    <p className="text-xs font-bold uppercase tracking-tight">{alert.title}</p>
                     <p className="text-sm leading-tight text-muted-foreground">{alert.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
-            <Button variant="ghost" className="w-full rounded-none h-12 text-primary font-bold text-xs uppercase hover:bg-primary/5">
-              View All Alerts <ChevronRight className="ml-1 h-3 w-3" />
-            </Button>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Actions */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {[
-          { label: "Book Tractor", icon: Truck, href: "/dashboard/services" },
-          { label: "Upload Crop Photo", icon: Smartphone, href: "/dashboard/disease" },
-          { label: "Get Yield Advisory", icon: BrainCircuit, href: "/dashboard/yield" },
-          { label: "Sell Carbon Credits", icon: Coins, href: "/dashboard/carbon" },
-          { label: "Call AI Advisor", icon: PhoneCall, href: "tel:+18005550199" },
+          { label: isHindi ? "ट्रैक्टर बुक करें" : "Book Tractor", icon: Truck, href: "/dashboard/services" },
+          { label: isHindi ? "फसल फोटो अपलोड" : "Upload Crop Photo", icon: Smartphone, href: "/dashboard/disease" },
+          { label: isHindi ? "उपज सलाह" : "Get Yield Advisory", icon: BrainCircuit, href: "/dashboard/yield" },
+          { label: isHindi ? "कार्बन क्रेडिट" : "Sell Carbon Credits", icon: Coins, href: "/dashboard/carbon" },
+          { label: isHindi ? "एआई सलाहकार" : "Call AI Advisor", icon: PhoneCall, href: "tel:+9118005550199" },
         ].map((action, i) => (
           <Link key={i} href={action.href}>
             <Button variant="outline" className="w-full h-auto py-6 rounded-2xl flex flex-col gap-3 group hover:border-primary transition-all">
