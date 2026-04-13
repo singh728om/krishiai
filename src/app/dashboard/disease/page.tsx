@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -6,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Camera, Upload, Loader2, CheckCircle2, AlertTriangle, MapPin, History, BrainCircuit, Pill, ShieldAlert } from "lucide-react";
+import { Camera, Upload, Loader2, CheckCircle2, AlertTriangle, MapPin, History, BrainCircuit, Pill, ShieldAlert, Sparkles, ScanLine, Zap } from "lucide-react";
 import { cropDiseaseDiagnosis, type CropDiseaseDiagnosisOutput } from "@/ai/flows/crop-disease-diagnosis";
 import { toast } from "@/hooks/use-toast";
 import Image from "next/image";
@@ -87,50 +86,64 @@ export default function DiseaseDetectionPage() {
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'Severe': return 'bg-red-500 hover:bg-red-600';
-      case 'Moderate': return 'bg-orange-500 hover:bg-orange-600';
-      case 'Mild': return 'bg-yellow-500 hover:bg-yellow-600 text-black';
-      default: return 'bg-emerald-500 hover:bg-emerald-600';
+      case 'Severe': return 'bg-red-500 text-white shadow-lg shadow-red-200';
+      case 'Moderate': return 'bg-amber-500 text-white shadow-lg shadow-amber-200';
+      case 'Mild': return 'bg-primary text-white shadow-lg shadow-primary/20';
+      default: return 'bg-emerald-500 text-white shadow-lg shadow-emerald-200';
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-headline font-bold">
-            {isHindi ? 'फसल रोग पहचान' : 'Crop Disease Detection'}
+    <div className="max-w-6xl mx-auto space-y-12">
+      {/* Header with high-tech badge */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="space-y-1">
+          <Badge variant="outline" className="rounded-full border-primary/20 text-primary bg-primary/5 px-4 py-1.5 font-bold flex items-center gap-2 w-fit">
+            <Sparkles className="h-3 w-3 fill-primary" /> Gemini 1.5 Powered
+          </Badge>
+          <h1 className="text-4xl font-headline font-black tracking-tight">
+            {isHindi ? 'फसल रोग निदान केंद्र' : 'AI Crop Pathology Center'}
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-lg">
             {isHindi 
-              ? 'त्वरित एआई निदान और उपचार योजना के लिए एक फोटो अपलोड करें।' 
-              : 'Upload a photo for instant AI diagnosis and treatment plan.'}
+              ? 'एआई विशेषज्ञ से अपनी फसल का तुरंत इलाज करवाएं।' 
+              : 'Instant field-side diagnosis with treatment protocol generation.'}
           </p>
         </div>
-        <Button variant="outline" className="rounded-xl">
+        <Button variant="outline" className="rounded-2xl border-2 font-bold bg-white h-12 px-6">
           <History className="mr-2 h-4 w-4" /> 
-          {isHindi ? 'इतिहास देखें' : 'View History'}
+          {isHindi ? 'स्कैन इतिहास' : 'Scan History'}
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <Card className="rounded-2xl border-none shadow-sm overflow-hidden flex flex-col justify-center items-center p-8 bg-white relative">
-          <div className="w-full relative aspect-square rounded-xl overflow-hidden mb-6 bg-muted/30 border-2 border-dashed border-muted flex items-center justify-center">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
+        {/* Modern Upload Card */}
+        <Card className="lg:col-span-2 rounded-[2.5rem] border-none shadow-sm overflow-hidden flex flex-col p-10 bg-white relative">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-blue-500" />
+          
+          <div className="w-full relative aspect-square rounded-[2rem] overflow-hidden mb-8 bg-muted/20 border-4 border-dashed border-muted flex items-center justify-center group transition-all hover:border-primary/40">
             {preview ? (
-              <Image src={preview} alt="Crop scan" fill className="object-cover" />
+              <>
+                <Image src={preview} alt="Crop scan" fill className="object-cover" />
+                {isAnalyzing && (
+                  <div className="absolute inset-0 bg-primary/10 overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-[2px] bg-primary shadow-[0_0_15px_rgba(22,163,74,0.8)] animate-[scan_2s_infinite]" />
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="flex flex-col items-center text-center space-y-4 p-4">
-                <div className="p-4 bg-primary/10 rounded-full">
-                  <Camera className="h-10 w-10 text-primary" />
+              <div className="flex flex-col items-center text-center space-y-6 p-8">
+                <div className="p-6 bg-primary/10 rounded-3xl transition-transform group-hover:scale-110">
+                  <Camera className="h-12 w-12 text-primary" />
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold">
-                    {isHindi ? 'फसल की फोटो अपलोड करें' : 'Upload Crop Image'}
+                <div className="space-y-2">
+                  <h3 className="text-xl font-black">
+                    {isHindi ? 'फसल की फोटो' : 'Visual Capture'}
                   </h3>
-                  <p className="text-sm text-muted-foreground max-w-[200px]">
+                  <p className="text-sm text-muted-foreground font-medium max-w-[240px]">
                     {isHindi 
-                      ? 'प्रभावित पत्तियों या तनों को स्पष्ट रूप से कैद करें' 
-                      : 'Capture the affected leaves or stems clearly'}
+                      ? 'स्पष्ट फोटो के लिए अच्छी रोशनी का उपयोग करें' 
+                      : 'Ensure optimal lighting for cellular-level analysis'}
                   </p>
                 </div>
               </div>
@@ -145,98 +158,122 @@ export default function DiseaseDetectionPage() {
             onChange={handleFileChange} 
             disabled={isAnalyzing}
           />
-          <Button 
-            disabled={isAnalyzing}
-            className="rounded-xl w-full" 
-            onClick={() => document.getElementById('crop-upload')?.click()}
-          >
-            {isAnalyzing ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isHindi ? 'विश्लेषण हो रहा है...' : 'Analyzing Symptoms...'}</>
-            ) : (
-              <><Upload className="mr-2 h-4 w-4" /> {preview ? (isHindi ? 'दूसरी फोटो चुनें' : 'Try Another Photo') : (isHindi ? 'फोटो चुनें' : 'Select Photo')}</>
-            )}
-          </Button>
-          <p className="text-[10px] text-muted-foreground mt-4 uppercase tracking-widest font-bold">{isHindi ? 'सुझाव: उच्च रिज़ॉल्यूशन JPG/PNG' : 'Recommended: High resolution JPG/PNG'}</p>
+          <div className="space-y-4">
+            <Button 
+              disabled={isAnalyzing}
+              className="rounded-2xl w-full h-14 text-lg font-bold shadow-xl shadow-primary/20" 
+              onClick={() => document.getElementById('crop-upload')?.click()}
+            >
+              {isAnalyzing ? (
+                <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> {isHindi ? 'विश्लेषण...' : 'Analyzing...'}</>
+              ) : (
+                <><Upload className="mr-2 h-5 w-5" /> {preview ? (isHindi ? 'बदलें' : 'Recapture') : (isHindi ? 'शुरू करें' : 'Initiate Scan')}</>
+              )}
+            </Button>
+            <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest font-black">
+              {isHindi ? 'समर्थित प्रारूप: JPG, PNG • अधिकतम 10MB' : 'Supported: JPG, PNG • Max 10MB'}
+            </p>
+          </div>
         </Card>
 
-        <Card className="rounded-2xl border-none shadow-sm overflow-hidden min-h-[400px] flex flex-col bg-white">
+        {/* Results Card - Silicon Valley Dashboard Style */}
+        <Card className="lg:col-span-3 rounded-[2.5rem] border-none shadow-sm overflow-hidden min-h-[500px] flex flex-col bg-white">
           {isAnalyzing ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-6">
-              <div className="relative h-20 w-20">
-                <div className="absolute inset-0 rounded-full border-4 border-primary/20" />
+            <div className="flex-1 flex flex-col items-center justify-center p-12 space-y-8 text-center">
+              <div className="relative h-24 w-24">
+                <div className="absolute inset-0 rounded-full border-4 border-primary/10" />
                 <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-                <BrainCircuit className="absolute inset-0 m-auto h-8 w-8 text-primary" />
+                <BrainCircuit className="absolute inset-0 m-auto h-10 w-10 text-primary animate-pulse" />
               </div>
-              <div className="text-center space-y-2">
-                <h3 className="text-xl font-bold">{isHindi ? 'जेमिनी एआई विशेषज्ञ' : 'Gemini AI Pathologist'}</h3>
-                <p className="text-sm text-muted-foreground italic">{isHindi ? 'रोगों की डेटाबेस से तुलना हो रही है...' : 'Running cross-reference on 10,000+ crop diseases...'}</p>
+              <div className="space-y-3">
+                <h3 className="text-2xl font-black">{isHindi ? 'एआई इंजन' : 'Gemini Pathology Engine'}</h3>
+                <p className="text-muted-foreground font-medium max-w-sm italic">
+                  {isHindi ? 'रोगों के वैश्विक डेटाबेस से तुलना हो रही है...' : 'Cross-referencing symptoms with global agricultural database...'}
+                </p>
               </div>
-              <div className="w-full max-w-[200px] space-y-2">
-                <Progress value={65} className="h-2" />
+              <div className="w-full max-w-[300px] space-y-4">
+                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                  <span>Sequencing Data</span>
+                  <span>78%</span>
+                </div>
+                <Progress value={78} className="h-2 rounded-full" />
               </div>
             </div>
           ) : result ? (
             <div className="flex-1 flex flex-col">
-              <div className="p-6 bg-primary/5 border-b">
-                <div className="flex justify-between items-start mb-4">
+              {/* Result Banner */}
+              <div className="p-8 bg-primary/5 border-b relative">
+                <div className="absolute top-0 right-0 p-8 opacity-5">
+                  <ScanLine className="h-32 w-32" />
+                </div>
+                <div className="flex justify-between items-start mb-8 relative z-10">
                   <div>
-                    <Badge className={cn("mb-2 font-bold border-none", getSeverityColor(result.severity))}>
-                      {result.severity} {isHindi ? 'गंभीरता' : 'Severity'}
+                    <Badge className={cn("mb-3 px-3 py-1 font-bold uppercase tracking-wider rounded-lg border-none", getSeverityColor(result.severity))}>
+                      {result.severity} {isHindi ? 'स्थिति' : 'Alert'}
                     </Badge>
-                    <h2 className="text-2xl font-bold">{result.diseaseName}</h2>
+                    <h2 className="text-4xl font-black tracking-tight">{result.diseaseName}</h2>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{isHindi ? 'एआई सटीकता' : 'AI Confidence'}</p>
-                    <p className="text-2xl font-bold text-primary">{result.confidenceScore}%</p>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">{isHindi ? 'एआई सटीकता' : 'Confidence'}</p>
+                    <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-2xl shadow-sm border">
+                      <Zap className="h-4 w-4 text-primary fill-primary" />
+                      <span className="text-2xl font-black text-primary">{result.confidenceScore}%</span>
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs font-bold uppercase">
-                    <span>{isHindi ? 'प्रभावित क्षेत्र' : 'Field Impact'}</span>
-                    <span>{result.affectedAreaPercentage}% Area</span>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                    <span>{isHindi ? 'संक्रमण का विस्तार' : 'Infection Spread'}</span>
+                    <span>{result.affectedAreaPercentage}% Coverage</span>
                   </div>
-                  <Progress value={result.affectedAreaPercentage} className="h-2" />
+                  <Progress value={result.affectedAreaPercentage} className="h-3 rounded-full bg-white shadow-inner" />
                 </div>
               </div>
               
-              <div className="p-6 space-y-6 flex-1 overflow-auto max-h-[400px]">
-                {result.treatmentMedicines.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                      <Pill className="h-4 w-4 text-red-500" /> 
-                      {isHindi ? 'अनुशंसित उपचार' : 'Recommended Treatments'}
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {result.treatmentMedicines.map((med, i) => (
-                        <Badge key={i} variant="secondary" className="px-3 py-1 bg-red-50 text-red-700 border-red-100">
-                          {med}
-                        </Badge>
-                      ))}
+              <div className="p-8 space-y-10 flex-1 overflow-auto max-h-[500px]">
+                {/* Treatment Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {result.treatmentMedicines.length > 0 && (
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <Pill className="h-4 w-4 text-red-500" /> 
+                        {isHindi ? 'अनुशंसित उपचार' : 'Therapeutic Protocol'}
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {result.treatmentMedicines.map((med, i) => (
+                          <div key={i} className="px-4 py-2 bg-red-50 text-red-700 rounded-xl font-bold text-sm border border-red-100 flex items-center gap-2">
+                            <div className="h-1.5 w-1.5 rounded-full bg-red-500" /> {med}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {result.precautions.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                      <ShieldAlert className="h-4 w-4 text-blue-500" /> 
-                      {isHindi ? 'सावधानियां' : 'Precautions'}
-                    </h3>
-                    <ul className="space-y-1 text-sm list-disc pl-5">
-                      {result.precautions.map((prec, i) => (
-                        <li key={i} className="text-muted-foreground">{prec}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                  {result.precautions.length > 0 && (
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <ShieldAlert className="h-4 w-4 text-blue-500" /> 
+                        {isHindi ? 'सावधानियां' : 'Safety Precautions'}
+                      </h3>
+                      <ul className="space-y-2">
+                        {result.precautions.map((prec, i) => (
+                          <li key={i} className="flex gap-3 text-sm font-medium text-muted-foreground leading-snug">
+                            <div className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                            {prec}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
 
-                <div className="space-y-2">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-primary" /> 
-                    {isHindi ? 'नैदानिक सलाह' : 'Diagnostic Advice'}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                    <BrainCircuit className="h-4 w-4 text-primary" /> 
+                    {isHindi ? 'एआई नैदानिक सलाह' : 'AI Diagnostic Summary'}
                   </h3>
-                  <div className="bg-muted/30 rounded-xl p-4 border border-dashed border-primary/30">
-                    <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                  <div className="bg-muted/30 rounded-3xl p-6 border-2 border-dashed border-primary/20">
+                    <p className="text-sm leading-relaxed font-medium text-foreground whitespace-pre-wrap">
                       {result.detailedAdvice}
                     </p>
                   </div>
@@ -244,51 +281,30 @@ export default function DiseaseDetectionPage() {
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
-              <div className="p-4 bg-muted/50 rounded-full mb-4">
-                <AlertTriangle className="h-12 w-12" />
+            <div className="flex-1 flex flex-col items-center justify-center p-20 text-center text-muted-foreground">
+              <div className="p-8 bg-muted/30 rounded-[2.5rem] mb-6">
+                <ScanLine className="h-20 w-20 text-muted-foreground/40" />
               </div>
-              <h3 className="text-lg font-bold text-foreground">
-                {isHindi ? 'कोई विश्लेषण नहीं' : 'No analysis performed'}
+              <h3 className="text-2xl font-black text-foreground mb-2">
+                {isHindi ? 'निदान की प्रतीक्षा है' : 'System Idle'}
               </h3>
-              <p className="text-sm">
+              <p className="text-sm font-medium max-w-xs">
                 {isHindi 
-                  ? 'एआई निदान यहाँ देखने के लिए एक फोटो अपलोड करें।' 
-                  : 'Upload a photo to see the AI diagnosis here.'}
+                  ? 'एआई विश्लेषण शुरू करने के लिए फसल की एक स्पष्ट फोटो अपलोड करें।' 
+                  : 'Awaiting visual input. Please upload a crop leaf image to initiate the Gemini diagnostic flow.'}
               </p>
             </div>
           )}
         </Card>
       </div>
 
-      {result && (
-        <Card className="rounded-2xl border-none shadow-sm overflow-hidden bg-white">
-          <CardHeader className="px-6 py-4 border-b">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-accent" /> 
-              {isHindi ? 'नजदीकी दवा विक्रेता' : 'Nearby Agro-Dealers for Medicines'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y">
-              {[
-                { name: "Kisan Suvidha Kendra", dist: "2.4 km", status: isHindi ? "खुला है" : "Open Now" },
-                { name: "Varuna Agro Solutions", dist: "5.1 km", status: isHindi ? "6 बजे बंद होगा" : "Closes 6 PM" },
-              ].map((dealer, i) => (
-                <div key={i} className="flex items-center justify-between p-4 px-6 hover:bg-muted/5 transition-colors">
-                  <div>
-                    <p className="text-sm font-bold">{dealer.name}</p>
-                    <p className="text-xs text-muted-foreground">{dealer.dist} • {dealer.status}</p>
-                  </div>
-                  <Button size="sm" variant="outline" className="rounded-lg h-8 border-primary/30 text-primary hover:bg-primary/5">
-                    {isHindi ? 'कॉल करें' : 'Call'}
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <style jsx global>{`
+        @keyframes scan {
+          0% { top: 0; }
+          50% { top: 100%; }
+          100% { top: 0; }
+        }
+      `}</style>
     </div>
   );
 }

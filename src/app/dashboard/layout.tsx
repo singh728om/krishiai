@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { DashboardNav } from "@/components/dashboard/nav";
-import { CloudRain, MapPin, Bell, Search, Loader2, Languages } from "lucide-react";
+import { CloudRain, MapPin, Bell, Search, Loader2, Languages, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -41,7 +40,7 @@ export default function DashboardLayout({
       await updateDoc(userRef, { languagePreference: lang });
       toast({
         title: lang === 'hindi' ? 'भाषा बदली गई' : 'Language Changed',
-        description: lang === 'hindi' ? 'अब आपको सलाह हिंदी में मिलेगी।' : 'You will now receive advice in English.',
+        description: lang === 'hindi' ? 'अब आपको सलाह हिंदी में मिलेगी।' : 'Interface and AI will now communicate in English.',
       });
     } catch (error) {
       console.error("Error updating language:", error);
@@ -57,71 +56,70 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background selection:bg-primary/20">
       <DashboardNav />
       
       <div className="flex-1 flex flex-col md:pl-64">
-        {/* Top Header */}
-        <header className="h-16 border-b bg-white/50 backdrop-blur sticky top-0 z-40 px-4 md:px-8 flex items-center justify-between">
-          <div className="hidden md:flex items-center gap-6 max-w-md flex-1">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input className="pl-10 h-10 border-none bg-muted/50 rounded-xl" placeholder="Search crops, prices, reports..." />
+        {/* Modern Header */}
+        <header className="h-20 border-b bg-white/70 backdrop-blur-xl sticky top-0 z-40 px-6 md:px-10 flex items-center justify-between">
+          <div className="hidden md:flex items-center gap-6 max-w-lg flex-1">
+            <div className="relative w-full group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <Input className="pl-11 h-11 border-none bg-muted/50 rounded-2xl focus-visible:ring-1 focus-visible:ring-primary/20 transition-all font-medium text-sm" placeholder="Search crops, mandi prices, analytics..." />
             </div>
           </div>
 
-          <div className="flex items-center gap-4 ml-auto">
-            {/* Language Selector */}
-            <div className="flex items-center gap-2">
-              <Languages className="h-4 w-4 text-muted-foreground hidden sm:block" />
-              <Select 
-                value={profile?.languagePreference || 'english'} 
-                onValueChange={handleLanguageChange}
-              >
-                <SelectTrigger className="h-9 w-[100px] rounded-xl border-primary/20 bg-primary/5 text-xs font-bold">
-                  <SelectValue placeholder="Lang" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="english">English</SelectItem>
-                  <SelectItem value="hindi">हिंदी</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Weather Widget */}
-            <div className="hidden lg:flex items-center gap-3 px-4 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
-              <div className="text-right">
-                <p className="text-xs font-bold leading-none">32°C</p>
-                <p className="text-[10px] text-primary leading-none mt-0.5">Partly Cloudy</p>
+          <div className="flex items-center gap-6 ml-auto">
+            {/* Weather & Location - Silicon Valley Style */}
+            <div className="hidden lg:flex items-center gap-4 px-5 py-2 bg-white rounded-2xl border shadow-sm">
+              <div className="flex items-center gap-2">
+                <CloudRain className="h-5 w-5 text-primary" />
+                <span className="text-sm font-black tracking-tight">32°C</span>
               </div>
-              <CloudRain className="h-5 w-5 text-primary" />
-              <div className="h-4 w-[1px] bg-primary/20" />
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <MapPin className="h-3 w-3" />
-                <span className="text-[10px] font-medium uppercase">Wardha, MH</span>
+              <div className="h-4 w-[1px] bg-border" />
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <MapPin className="h-4 w-4" />
+                <span className="text-[10px] font-black uppercase tracking-widest">{profile?.district || 'Wardha, MH'}</span>
               </div>
             </div>
 
-            <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-xl">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-2.5 right-2.5 h-2 w-2 bg-accent rounded-full border-2 border-white" />
-            </Button>
+            {/* Language Selection */}
+            <Select 
+              value={profile?.languagePreference || 'english'} 
+              onValueChange={handleLanguageChange}
+            >
+              <SelectTrigger className="h-10 w-[110px] rounded-2xl border-none bg-primary/5 text-xs font-black uppercase tracking-widest text-primary focus:ring-0">
+                <Languages className="h-4 w-4 mr-2" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-none shadow-2xl">
+                <SelectItem value="english">English</SelectItem>
+                <SelectItem value="hindi">हिंदी</SelectItem>
+              </SelectContent>
+            </Select>
 
-            <div className="flex items-center gap-3 pl-2">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold leading-none">{profile?.name || user.displayName || user.email?.split('@')[0] || 'Farmer'}</p>
-                <p className="text-[10px] text-muted-foreground uppercase mt-1">{profile?.subscriptionPlan || 'Farmer Pro'}</p>
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" className="relative h-11 w-11 rounded-2xl hover:bg-muted transition-colors">
+                <Bell className="h-5 w-5" />
+                <span className="absolute top-3 right-3 h-2 w-2 bg-accent rounded-full border-2 border-white" />
+              </Button>
+
+              <div className="flex items-center gap-4 pl-4 border-l">
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-black leading-none">{profile?.name || user.displayName || user.email?.split('@')[0]}</p>
+                  <p className="text-[10px] text-muted-foreground font-black uppercase tracking-tighter mt-1">{profile?.subscriptionPlan || 'Free Tier'}</p>
+                </div>
+                <Avatar className="h-11 w-11 border-2 border-primary/20 rounded-2xl shadow-sm">
+                  <AvatarImage src={user.photoURL || `https://picsum.photos/seed/${user.uid}/44/44`} />
+                  <AvatarFallback className="bg-primary text-white font-black">{(user.displayName || user.email || 'F').charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
               </div>
-              <Avatar className="h-10 w-10 border-2 border-primary/20 rounded-xl">
-                <AvatarImage src={user.photoURL || `https://picsum.photos/seed/${user.uid}/40/40`} />
-                <AvatarFallback>{(user.displayName || user.email || 'F').charAt(0).toUpperCase()}</AvatarFallback>
-              </Avatar>
             </div>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="p-4 md:p-8">
+        <main className="p-6 md:p-10 max-w-[1600px] mx-auto w-full">
           {children}
         </main>
       </div>

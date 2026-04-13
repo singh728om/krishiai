@@ -23,7 +23,7 @@
     --border: 132 15% 90%;
     --input: 132 15% 90%;
     --ring: 142 76% 36%;
-    --radius: 0.75rem;
+    --radius: 1rem;
 
     --sidebar-background: 132 30% 98%;
     --sidebar-foreground: 132 60% 20%;
@@ -81,6 +81,10 @@
     @apply bg-background text-foreground font-body;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-headline;
+    @apply font-headline tracking-tight;
   }
+}
+
+.glass {
+  @apply bg-white/70 backdrop-blur-lg border border-white/20;
 }

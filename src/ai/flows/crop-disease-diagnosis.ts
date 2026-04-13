@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview An AI agent for detecting crop diseases from a photo and providing treatment recommendations.
@@ -57,13 +56,13 @@ Your task:
 7. Provide long-term preventative measures.
 8. Give a detailed, actionable summary.
 
-IMPORTANT: You MUST provide the following fields in the requested language ({{{language}}}):
+STRICT INSTRUCTION: You MUST translate ALL the following fields into the requested language ({{{language}}}):
 - diseaseName
 - treatmentMedicines
 - precautions
 - detailedAdvice
 
-If the language is Hindi, use Devnagari script. If English, use English.`,
+If the language is Hindi, use Devnagari script (e.g., use "झुलसा रोग" instead of "Blight"). If English, use English. Do not mix languages.`,
 });
 
 const cropDiseaseDiagnosisFlow = ai.defineFlow(
