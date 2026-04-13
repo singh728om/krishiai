@@ -18,6 +18,12 @@ service cloud.firestore {
       allow delete: if isOwner(userId);
     }
 
+    match /farmServices/{serviceId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.providerId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.providerId == request.auth.uid;
+    }
+
     match /equipmentServices/{serviceId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.providerId == request.auth.uid;

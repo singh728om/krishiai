@@ -20,30 +20,36 @@ import {
   CheckCircle2,
   Info,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  ShoppingBasket,
+  Store,
+  Settings,
+  X,
+  Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from "@/firebase";
+import { doc, collection, addDoc, serverTimestamp, query, where, orderBy } from "firebase/firestore";
 import Link from "next/link";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/use-toast";
 
-const equipmentMock = [
-  { id: "1", type: "Tractor", model: "Mahindra 575 DI", village: "Anji", district: "Wardha", pincode: "442001", price: "₹800/hr", provider: "Rajesh K.", rating: 4.8, status: "Available" },
-  { id: "2", type: "Harvester", model: "John Deere W70", village: "Seloo", district: "Wardha", pincode: "442102", price: "₹2,500/hr", provider: "Vikram S.", rating: 4.5, status: "Busy" },
-  { id: "3", type: "Tractor", model: "Swaraj 744 FE", village: "Anji", district: "Wardha", pincode: "442001", price: "₹750/hr", provider: "Amit P.", rating: 4.9, status: "Available" },
-  { id: "4", type: "Plough", model: "Universal 3-Bottom", village: "Deoli", district: "Wardha", pincode: "442301", price: "₹400/hr", provider: "Amol G.", rating: 4.6, status: "Available" },
-];
-
-const laborMock = [
-  { id: "1", type: "Sowing Group", count: 12, village: "Deoli", district: "Wardha", pincode: "442301", price: "₹450/day", contractor: "Suresh Group", rating: 4.7, availability: "Immediate" },
-  { id: "2", type: "Harvesting Team", count: 25, village: "Anji", district: "Wardha", pincode: "442001", price: "₹500/day", contractor: "Janata Labor", rating: 4.4, availability: "Next Week" },
-  { id: "3", type: "Pesticide Spray", count: 5, village: "Seloo", district: "Wardha", pincode: "442102", price: "₹600/day", contractor: "SafeCrop Team", rating: 4.9, availability: "Immediate" },
+// Mock data for initial empty state or offline
+const initialMockServices = [
+  { id: "e1", category: "Equipment", type: "Tractor", title: "Mahindra 575 DI", village: "Anji", district: "Wardha", pincode: "442001", price: "₹800/hr", provider: "Rajesh K.", rating: 4.8, status: "Available" },
+  { id: "l1", category: "Labor", type: "Sowing Group", title: "Suresh Sowing Team", village: "Deoli", district: "Wardha", pincode: "442301", price: "₹450/day", contractor: "Suresh D.", rating: 4.7, availability: "Immediate" },
+  { id: "i1", category: "Inputs", type: "Seed Shop", title: "Bharat Seeds & Fertilizers", village: "Anji", district: "Wardha", pincode: "442001", price: "Market Rates", provider: "Amol G.", rating: 4.9, status: "Open" },
 ];
 
 export default function FarmServicesPage() {
   const { user } = useUser();
   const db = useFirestore();
   const [searchTerm, setSearchTerm] = useState("");
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const userRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -52,40 +58,103 @@ export default function FarmServicesPage() {
 
   const { data: profile, isLoading: isProfileLoading } = useDoc(userRef);
 
-  const filteredEquipment = useMemo(() => {
-    return equipmentMock.filter(item => {
+  // Firestore query for services
+  const servicesRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, "farmServices");
+  }, [db]);
+
+  const { data: firestoreServices, isLoading: isServicesLoading } = useCollection(servicesRef);
+
+  const allServices = useMemo(() => {
+    const combined = [...initialMockServices];
+    if (firestoreServices) {
+      firestoreServices.forEach(fs => {
+        if (!combined.find(c => c.id === fs.id)) {
+          combined.push({
+            id: fs.id,
+            category: fs.category,
+            type: fs.type,
+            title: fs.title,
+            village: fs.village,
+            district: fs.district,
+            pincode: fs.pincode,
+            price: fs.unit ? `₹${fs.price}/${fs.unit}` : `₹${fs.price}`,
+            provider: fs.providerName || "Local Provider",
+            rating: fs.rating || 4.5,
+            status: fs.status || "Available",
+            ...fs
+          });
+        }
+      });
+    }
+    return combined;
+  }, [firestoreServices]);
+
+  const filteredServices = useMemo(() => {
+    return allServices.filter(item => {
       const matchesSearch = 
-        item.model.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        item.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
         item.village.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.type.toLowerCase().includes(searchTerm.toLowerCase());
-      
       return matchesSearch;
     }).sort((a, b) => {
-      // Prioritize village then district
-      if (profile?.village && a.village === profile.village && b.village !== profile.village) return -1;
-      if (profile?.village && b.village === profile.village && a.village !== profile.village) return 1;
-      if (profile?.district && a.district === profile.district && b.district !== profile.district) return -1;
-      if (profile?.district && b.district === profile.district && a.district !== profile.district) return 1;
+      // Prioritize village then district based on profile
+      if (profile?.village) {
+        if (a.village === profile.village && b.village !== profile.village) return -1;
+        if (b.village === profile.village && a.village !== profile.village) return 1;
+      }
+      if (profile?.district) {
+        if (a.district === profile.district && b.district !== profile.district) return -1;
+        if (b.district === profile.district && a.district !== profile.district) return 1;
+      }
       return 0;
     });
-  }, [searchTerm, profile]);
+  }, [searchTerm, profile, allServices]);
 
-  const filteredLabor = useMemo(() => {
-    return laborMock.filter(item => {
-      const matchesSearch = 
-        item.contractor.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        item.village.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.type.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      return matchesSearch;
-    }).sort((a, b) => {
-      if (profile?.village && a.village === profile.village && b.village !== profile.village) return -1;
-      if (profile?.village && b.village === profile.village && a.village !== profile.village) return 1;
-      return 0;
-    });
-  }, [searchTerm, profile]);
+  const handleRegisterService = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!user || !db) return;
 
-  const hasLocation = profile?.village || profile?.district;
+    setIsSubmitting(true);
+    const formData = new FormData(e.currentTarget);
+    
+    const newService = {
+      providerId: user.uid,
+      providerName: profile?.name || user.displayName || "Unknown",
+      category: formData.get("category"),
+      type: formData.get("type"),
+      title: formData.get("title"),
+      description: formData.get("description"),
+      price: Number(formData.get("price")),
+      unit: formData.get("unit"),
+      village: formData.get("village") || profile?.village || "",
+      district: formData.get("district") || profile?.district || "",
+      pincode: formData.get("pincode") || profile?.pincode || "",
+      phone: formData.get("phone") || profile?.phone || "",
+      rating: 5.0,
+      status: "Available",
+      createdAt: serverTimestamp(),
+    };
+
+    try {
+      await addDoc(collection(db, "farmServices"), newService);
+      toast({
+        title: "Service Registered!",
+        description: "Your service is now live for farmers in your area.",
+      });
+      setIsRegisterOpen(false);
+    } catch (error) {
+      console.error("Registration error:", error);
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: "Could not list your service. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (isProfileLoading) {
     return (
@@ -96,192 +165,255 @@ export default function FarmServicesPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-headline font-bold">Farm Services</h1>
-          <p className="text-muted-foreground">Find tractors, harvesters, and labor groups near you.</p>
+    <div className="space-y-10 pb-20">
+      {/* Hero / Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="space-y-1">
+          <Badge variant="outline" className="rounded-full border-primary/20 text-primary bg-primary/5 px-4 py-1.5 font-bold flex items-center gap-2 w-fit">
+            <Sparkles className="h-3 w-3 fill-primary" /> Krishi Mitra Marketplace
+          </Badge>
+          <h1 className="text-4xl font-headline font-black tracking-tight">Farm Services</h1>
+          <p className="text-muted-foreground text-lg">Hyper-local access to tractors, labor groups, and input supplies.</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" className="rounded-xl border-primary/20">
+        <div className="flex gap-4">
+          <Button variant="outline" className="rounded-2xl border-2 font-bold bg-white h-12 px-6">
             My Listings
           </Button>
-          <Button className="rounded-xl shadow-lg shadow-primary/20 bg-primary">
-            <Plus className="mr-2 h-4 w-4" /> Register Service
-          </Button>
+          
+          <Dialog open={isRegisterOpen} onOpenChange={setIsRegisterOpen}>
+            <DialogTrigger asChild>
+              <Button className="rounded-2xl h-12 px-8 font-bold shadow-xl shadow-primary/20 transition-all hover:scale-105">
+                <Plus className="mr-2 h-5 w-5" /> List My Service
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="rounded-[2.5rem] p-10 max-w-2xl bg-white border-none shadow-2xl">
+              <DialogHeader>
+                <DialogTitle className="text-3xl font-black">Register as Provider</DialogTitle>
+                <CardDescription className="text-lg">Become a part of the KrishiMitra local economy.</CardDescription>
+              </DialogHeader>
+              <form onSubmit={handleRegisterService} className="space-y-6 mt-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Category</Label>
+                    <Select name="category" required defaultValue="Equipment">
+                      <SelectTrigger className="rounded-2xl h-12 bg-muted/30 border-none font-bold">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl border-none shadow-2xl">
+                        <SelectItem value="Equipment">Equipment (Tractor/Harvester)</SelectItem>
+                        <SelectItem value="Labor">Labor Group</SelectItem>
+                        <SelectItem value="Inputs">Inputs (Seeds/Fertilizer)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Service Type</Label>
+                    <Input name="type" placeholder="e.g. 50HP Tractor, Wheat Labor" required className="rounded-2xl h-12 bg-muted/30 border-none font-bold" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Title / Shop Name</Label>
+                  <Input name="title" placeholder="e.g. Mahavir Agro Center" required className="rounded-2xl h-12 bg-muted/30 border-none font-bold text-lg" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Price (₹)</Label>
+                    <Input name="price" type="number" placeholder="500" required className="rounded-2xl h-12 bg-muted/30 border-none font-bold" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Unit</Label>
+                    <Select name="unit" required defaultValue="hour">
+                      <SelectTrigger className="rounded-2xl h-12 bg-muted/30 border-none font-bold">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl border-none shadow-2xl">
+                        <SelectItem value="hour">Per Hour</SelectItem>
+                        <SelectItem value="day">Per Day</SelectItem>
+                        <SelectItem value="acre">Per Acre</SelectItem>
+                        <SelectItem value="unit">Per Unit (Fixed)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Village</Label>
+                    <Input name="village" defaultValue={profile?.village} required className="rounded-xl h-10 bg-muted/30 border-none font-bold" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">District</Label>
+                    <Input name="district" defaultValue={profile?.district} required className="rounded-xl h-10 bg-muted/30 border-none font-bold" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Phone</Label>
+                    <Input name="phone" defaultValue={profile?.phone} required className="rounded-xl h-10 bg-muted/30 border-none font-bold" />
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full h-14 rounded-2xl text-xl font-black shadow-xl shadow-primary/20" disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : "Publish Listing"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
-      {!hasLocation && (
-        <Card className="rounded-2xl border-none bg-amber-50 border border-amber-200">
-          <CardContent className="p-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="h-5 w-5 text-amber-600" />
-              <p className="text-sm font-medium text-amber-800">
-                Complete your location profile to see services in your village.
-              </p>
+      {!profile?.village && (
+        <Card className="rounded-3xl border-none bg-amber-50 border-2 border-dashed border-amber-200">
+          <CardContent className="p-8 flex items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="p-4 bg-amber-100 rounded-2xl text-amber-700">
+                <AlertCircle className="h-8 w-8" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xl font-black text-amber-900">Location Missing</h4>
+                <p className="text-sm font-medium text-amber-800/80 max-w-md leading-relaxed">
+                  We need your village data to show you the closest services first. It only takes a minute to set up.
+                </p>
+              </div>
             </div>
-            <Button size="sm" variant="outline" className="rounded-lg bg-white border-amber-300 text-amber-800 hover:bg-amber-100" asChild>
-              <Link href="/dashboard/settings">Settings</Link>
+            <Button className="rounded-2xl bg-amber-600 hover:bg-amber-700 font-bold h-12 px-8" asChild>
+              <Link href="/dashboard/settings">Update Profile</Link>
             </Button>
           </CardContent>
         </Card>
       )}
 
-      {hasLocation && (
-        <div className="flex items-center gap-2 text-sm text-primary font-bold bg-primary/5 w-fit px-4 py-2 rounded-full border border-primary/10">
-          <MapPin className="h-4 w-4" />
-          Showing services for: {profile?.village || 'Local'}, {profile?.district}
+      {profile?.village && (
+        <div className="flex items-center gap-3 text-sm text-primary font-black bg-primary/5 w-fit px-6 py-3 rounded-2xl border border-primary/20 shadow-sm">
+          <MapPin className="h-5 w-5" />
+          <span className="uppercase tracking-widest text-xs">Serving: {profile.village}, {profile.district}</span>
         </div>
       )}
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+      <div className="relative group max-w-3xl">
+        <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
         <Input 
-          className="pl-11 h-12 rounded-2xl bg-white border-none shadow-sm" 
-          placeholder="Search by equipment, village or district..." 
+          className="pl-14 h-16 rounded-3xl bg-white border-none shadow-sm text-lg font-medium focus-visible:ring-primary/20" 
+          placeholder="Search for 'Tractor', 'Labor' or specific village..." 
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
-      <Tabs defaultValue="equipment" className="w-full">
-        <TabsList className="bg-muted/50 p-1 rounded-2xl mb-8">
-          <TabsTrigger value="equipment" className="rounded-xl px-8 data-[state=active]:bg-primary data-[state=active]:text-white">
-            <Truck className="mr-2 h-4 w-4" /> Equipment
-          </TabsTrigger>
-          <TabsTrigger value="labor" className="rounded-xl px-8 data-[state=active]:bg-primary data-[state=active]:text-white">
-            <Users className="mr-2 h-4 w-4" /> Labor & Workers
-          </TabsTrigger>
+      <Tabs defaultValue="Equipment" className="w-full">
+        <TabsList className="bg-muted/50 p-2 rounded-[2rem] mb-10 h-16 inline-flex gap-2">
+          {["Equipment", "Labor", "Inputs"].map((tab) => (
+            <TabsTrigger 
+              key={tab}
+              value={tab} 
+              className="rounded-2xl px-10 font-black h-full text-sm data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-xl transition-all"
+            >
+              {tab === "Equipment" && <Truck className="mr-2 h-4 w-4" />}
+              {tab === "Labor" && <Users className="mr-2 h-4 w-4" />}
+              {tab === "Inputs" && <ShoppingBasket className="mr-2 h-4 w-4" />}
+              {tab}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
-        <TabsContent value="equipment" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredEquipment.map((item) => (
-              <Card key={item.id} className="rounded-2xl border-none shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
-                <div className="h-48 bg-muted relative">
-                  <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
-                    <Badge className={cn(
-                      "rounded-lg font-bold",
-                      item.status === "Available" ? "bg-emerald-500" : "bg-amber-500"
-                    )}>
-                      {item.status}
-                    </Badge>
-                    {profile?.village === item.village && (
-                      <Badge className="bg-primary text-white border-none shadow-sm">Your Village</Badge>
-                    )}
+        {["Equipment", "Labor", "Inputs"].map((cat) => (
+          <TabsContent key={cat} value={cat} className="space-y-10 animate-in fade-in slide-in-from-bottom-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredServices.filter(s => s.category === cat).map((item) => (
+                <Card key={item.id} className="rounded-[2.5rem] border-none shadow-sm overflow-hidden hover:shadow-2xl transition-all group bg-white">
+                  <div className="h-48 bg-muted/20 relative p-6">
+                    <div className="absolute top-6 right-6 flex flex-col gap-2 items-end z-10">
+                      <Badge className={cn(
+                        "rounded-xl px-3 py-1 font-bold border-none",
+                        item.status === "Available" || item.status === "Open" ? "bg-emerald-500" : "bg-amber-500"
+                      )}>
+                        {item.status}
+                      </Badge>
+                      {profile?.village === item.village && (
+                        <Badge className="bg-primary text-white border-none shadow-lg px-3 py-1 rounded-xl">In Your Village</Badge>
+                      )}
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center opacity-5 group-hover:opacity-10 transition-opacity">
+                      {cat === "Equipment" && <Truck className="h-32 w-32 text-primary" />}
+                      {cat === "Labor" && <Users className="h-32 w-32 text-primary" />}
+                      {cat === "Inputs" && <Store className="h-32 w-32 text-primary" />}
+                    </div>
+                    <div className="relative z-10 mt-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{item.type}</p>
+                      <h3 className="text-2xl font-black group-hover:text-primary transition-colors leading-tight">{item.title}</h3>
+                    </div>
                   </div>
-                  <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                    <Truck className="h-24 w-24 text-primary" />
+                  <CardContent className="p-8 space-y-8">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 text-sm font-bold text-muted-foreground">
+                        <div className="p-2 bg-muted/50 rounded-lg"><MapPin className="h-4 w-4 text-primary" /></div>
+                        {item.village}, {item.district}
+                      </div>
+                      <div className="flex items-center gap-3 text-2xl font-black text-primary">
+                        {item.price}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-6 border-t border-muted/50">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center font-black text-primary">
+                          {item.provider?.charAt(0) || "P"}
+                        </div>
+                        <div>
+                          <p className="text-xs font-black leading-none">{item.provider}</p>
+                          <div className="flex items-center gap-1 mt-1">
+                            <Star className="h-3 w-3 text-accent fill-accent" />
+                            <span className="text-[10px] font-bold">{item.rating}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <Button className="rounded-xl font-bold h-11 px-6 shadow-lg shadow-primary/10 transition-transform hover:scale-105" asChild>
+                        <a href={`tel:${item.phone || '18005550199'}`}>
+                          <Phone className="mr-2 h-4 w-4" /> Contact
+                        </a>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {filteredServices.filter(s => s.category === cat).length === 0 && (
+                <div className="col-span-full py-32 text-center bg-muted/10 rounded-[3rem] border-2 border-dashed flex flex-col items-center justify-center gap-4">
+                  <div className="p-6 bg-white rounded-full shadow-sm"><Info className="h-10 w-10 text-muted-foreground/40" /></div>
+                  <div className="space-y-1">
+                    <h3 className="text-xl font-black">No services found</h3>
+                    <p className="text-sm text-muted-foreground font-medium">Try broadening your search or be the first to list a service!</p>
                   </div>
                 </div>
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{item.type}</p>
-                      <h3 className="text-xl font-bold group-hover:text-primary transition-colors">{item.model}</h3>
-                    </div>
-                    <div className="flex items-center gap-1 bg-primary/5 px-2 py-1 rounded-lg">
-                      <Star className="h-3 w-3 text-accent fill-accent" />
-                      <span className="text-xs font-bold">{item.rating}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2 mb-6">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4 text-primary" />
-                      {item.village}, {item.district}
-                    </div>
-                    <div className="flex items-center gap-2 text-sm font-bold text-primary">
-                      {item.price}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-xs">
-                        {item.provider.charAt(0)}
-                      </div>
-                      <span className="text-xs font-medium">{item.provider}</span>
-                    </div>
-                    <Button size="sm" className="rounded-xl">
-                      <Phone className="mr-2 h-3 w-3" /> Contact
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            {filteredEquipment.length === 0 && (
-              <div className="col-span-full py-20 text-center">
-                <p className="text-muted-foreground">No equipment services found matching your criteria.</p>
-              </div>
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="labor" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredLabor.map((item) => (
-              <Card key={item.id} className="rounded-2xl border-none shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
-                <CardHeader className="bg-primary/5 pb-4">
-                  <div className="flex justify-between items-center">
-                    <Badge variant="outline" className="border-primary/20 text-primary">{item.type}</Badge>
-                    <div className="flex items-center gap-1 text-xs font-bold">
-                      <Star className="h-3 w-3 text-accent fill-accent" />
-                      {item.rating}
-                    </div>
-                  </div>
-                  <CardTitle className="mt-4">{item.contractor}</CardTitle>
-                  <CardDescription className="flex items-center gap-1">
-                    <Users className="h-3 w-3" /> {item.count} Workers Available
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Location:</span>
-                      <span className="font-bold flex items-center gap-1">
-                        {profile?.village === item.village && <span className="h-2 w-2 rounded-full bg-primary" />}
-                        {item.village}, {item.district}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Rate:</span>
-                      <span className="font-bold text-primary">{item.price}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Availability:</span>
-                      <Badge variant="secondary" className="rounded-lg">{item.availability}</Badge>
-                    </div>
-                  </div>
-                  <Button className="w-full mt-6 rounded-xl">
-                    Request Booking <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-            {filteredLabor.length === 0 && (
-              <div className="col-span-full py-20 text-center">
-                <p className="text-muted-foreground">No labor services found matching your criteria.</p>
-              </div>
-            )}
-          </div>
-        </TabsContent>
+              )}
+            </div>
+          </TabsContent>
+        ))}
       </Tabs>
 
-      <Card className="rounded-2xl border-none shadow-sm bg-accent/10 border border-accent/20">
-        <CardContent className="p-6 flex items-start gap-4">
-          <div className="bg-accent/20 p-2 rounded-xl">
-            <Info className="h-5 w-5 text-accent" />
-          </div>
-          <div>
-            <h4 className="font-bold text-accent">Service Verification</h4>
-            <p className="text-sm text-muted-foreground mt-1">
-              All services listed on KrishiAI undergo village-level verification. 
-              {profile?.district ? ` We are currently prioritizing providers in the ${profile.district} area.` : ''}
+      {/* Trust Banner */}
+      <Card className="rounded-[3rem] border-none shadow-sm bg-emerald-950 text-white p-12 overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-1/3 h-full opacity-5 pointer-events-none">
+          <CheckCircle2 className="w-full h-full" />
+        </div>
+        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
+          <div className="space-y-4 max-w-xl text-center md:text-left">
+            <h3 className="text-3xl font-black">Verified Local Economy</h3>
+            <p className="text-lg text-emerald-100/70 font-medium leading-relaxed">
+              Every service listed here is verified by our field operations team. We prioritize local providers to keep the economy thriving within your village.
             </p>
+            <div className="flex flex-wrap justify-center md:justify-start gap-4 pt-4">
+              <div className="px-5 py-2 bg-white/10 rounded-2xl border border-white/20 text-xs font-bold flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary" /> Identity Verified
+              </div>
+              <div className="px-5 py-2 bg-white/10 rounded-2xl border border-white/20 text-xs font-bold flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary" /> Price Transparency
+              </div>
+            </div>
           </div>
-        </CardContent>
+          <Button variant="secondary" className="rounded-2xl h-16 px-10 font-black bg-white text-emerald-900 hover:bg-emerald-50 text-lg shadow-2xl" asChild>
+            <Link href="/dashboard/settings">Complete Profile <ArrowRight className="ml-2 h-6 w-6" /></Link>
+          </Button>
+        </div>
       </Card>
     </div>
   );

@@ -22,6 +22,28 @@
       },
       "required": ["id", "name", "email", "phone"]
     },
+    "FarmService": {
+      "title": "FarmService",
+      "type": "object",
+      "description": "Services listed by providers (tractors, labor, seed shops).",
+      "properties": {
+        "id": { "type": "string" },
+        "providerId": { "type": "string" },
+        "category": { "type": "string", "enum": ["Equipment", "Labor", "Inputs"] },
+        "type": { "type": "string", "description": "e.g., Tractor, Sowing Labor, Seed Shop" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "unit": { "type": "string", "enum": ["hour", "day", "acre", "unit"] },
+        "village": { "type": "string" },
+        "district": { "type": "string" },
+        "pincode": { "type": "string" },
+        "phone": { "type": "string" },
+        "rating": { "type": "number" },
+        "status": { "type": "string", "enum": ["Available", "Busy", "Closed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
     "LeasePlot": {
       "title": "LeasePlot",
       "type": "object",
@@ -69,6 +91,14 @@
           "entityName": "UserProfile",
           "schema": { "$ref": "#/backend/entities/UserProfile" },
           "description": "User profiles."
+        }
+      },
+      {
+        "path": "/farmServices/{serviceId}",
+        "definition": {
+          "entityName": "FarmService",
+          "schema": { "$ref": "#/backend/entities/FarmService" },
+          "description": "Marketplace for tractors, labor, and inputs."
         }
       },
       {
