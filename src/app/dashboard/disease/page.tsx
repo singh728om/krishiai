@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -5,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Camera, Upload, Loader2, CheckCircle2, AlertTriangle, MapPin, History } from "lucide-react";
+import { Camera, Upload, Loader2, CheckCircle2, AlertTriangle, MapPin, History, BrainCircuit, Bug, ChevronRight } from "lucide-react";
 import { cropDiseaseDiagnosis, type CropDiseaseDiagnosisOutput } from "@/ai/flows/crop-disease-diagnosis";
 import { toast } from "@/hooks/use-toast";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 export default function DiseaseDetectionPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);

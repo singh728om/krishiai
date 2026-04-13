@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -20,8 +21,10 @@ import {
   ExternalLink, 
   Search,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Info
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const trendData = [
   { day: 'Mon', price: 6100 },

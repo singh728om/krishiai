@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import {
   Calendar
 } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 const stats = [
   { label: "Crop Health Score", value: "88", sub: "Excellent", color: "text-primary", trend: "+4%", icon: BrainCircuit },
