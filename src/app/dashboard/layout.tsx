@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 
 export default function DashboardLayout({
@@ -37,13 +38,23 @@ export default function DashboardLayout({
   const handleLanguageChange = async (lang: string) => {
     if (!userRef) return;
     try {
-      await updateDoc(userRef, { languagePreference: lang });
+      // Use setDoc with merge: true to handle cases where the profile doc doesn't exist yet
+      await setDoc(userRef, { 
+        languagePreference: lang,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      
       toast({
         title: lang === 'hindi' ? 'भाषा बदली गई' : 'Language Changed',
         description: lang === 'hindi' ? 'अब आपको सलाह हिंदी में मिलेगी।' : 'Interface and AI will now communicate in English.',
       });
     } catch (error) {
       console.error("Error updating language:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update language preference."
+      });
     }
   };
 
