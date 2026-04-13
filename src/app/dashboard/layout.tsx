@@ -1,5 +1,10 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@/firebase';
 import { DashboardNav } from "@/components/dashboard/nav";
-import { CloudRain, MapPin, User, Bell, Search } from "lucide-react";
+import { CloudRain, MapPin, Bell, Search, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -9,6 +14,23 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/auth');
+    }
+  }, [user, isUserLoading, router]);
+
+  if (isUserLoading || !user) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-background">
       <DashboardNav />
@@ -45,12 +67,12 @@ export default function DashboardLayout({
 
             <div className="flex items-center gap-3 pl-2">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold leading-none">Ramesh Patel</p>
+                <p className="text-sm font-bold leading-none">{user.displayName || user.email?.split('@')[0] || 'Farmer'}</p>
                 <p className="text-[10px] text-muted-foreground uppercase mt-1">Farmer Pro</p>
               </div>
               <Avatar className="h-10 w-10 border-2 border-primary/20 rounded-xl">
-                <AvatarImage src="https://picsum.photos/seed/farmer1/40/40" />
-                <AvatarFallback>RP</AvatarFallback>
+                <AvatarImage src={user.photoURL || `https://picsum.photos/seed/${user.uid}/40/40`} />
+                <AvatarFallback>{(user.displayName || user.email || 'F').charAt(0).toUpperCase()}</AvatarFallback>
               </Avatar>
             </div>
           </div>

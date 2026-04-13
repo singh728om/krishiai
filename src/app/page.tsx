@@ -19,9 +19,9 @@ export default function LandingPage() {
         <nav className="ml-auto flex gap-4 sm:gap-6">
           <Link className="text-sm font-medium hover:text-primary transition-colors" href="#features">Features</Link>
           <Link className="text-sm font-medium hover:text-primary transition-colors" href="#pricing">Pricing</Link>
-          <Link className="text-sm font-medium hover:text-primary transition-colors" href="/dashboard">Login</Link>
+          <Link className="text-sm font-medium hover:text-primary transition-colors" href="/auth">Login</Link>
           <Button size="sm" asChild>
-            <Link href="/dashboard">Get Started</Link>
+            <Link href="/auth">Get Started</Link>
           </Button>
         </nav>
       </header>
@@ -45,7 +45,7 @@ export default function LandingPage() {
                 </div>
                 <div className="flex flex-col gap-2 min-[400px]:flex-row">
                   <Button size="lg" asChild className="px-8">
-                    <Link href="/dashboard">Start Free Trial <ChevronRight className="ml-2 h-4 w-4" /></Link>
+                    <Link href="/auth">Start Free Trial <ChevronRight className="ml-2 h-4 w-4" /></Link>
                   </Button>
                   <Button variant="outline" size="lg">Watch Demo</Button>
                 </div>
