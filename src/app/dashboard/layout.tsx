@@ -1,13 +1,17 @@
+
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { DashboardNav } from "@/components/dashboard/nav";
-import { CloudRain, MapPin, Bell, Search, Loader2 } from "lucide-react";
+import { CloudRain, MapPin, Bell, Search, Loader2, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { doc, updateDoc } from 'firebase/firestore';
+import { toast } from '@/hooks/use-toast';
 
 export default function DashboardLayout({
   children,
@@ -15,13 +19,34 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { user, isUserLoading } = useUser();
+  const db = useFirestore();
   const router = useRouter();
+
+  const userRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, "users", user.uid);
+  }, [db, user?.uid]);
+
+  const { data: profile } = useDoc(userRef);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/auth');
     }
   }, [user, isUserLoading, router]);
+
+  const handleLanguageChange = async (lang: string) => {
+    if (!userRef) return;
+    try {
+      await updateDoc(userRef, { languagePreference: lang });
+      toast({
+        title: lang === 'hindi' ? 'भाषा बदली गई' : 'Language Changed',
+        description: lang === 'hindi' ? 'अब आपको सलाह हिंदी में मिलेगी।' : 'You will now receive advice in English.',
+      });
+    } catch (error) {
+      console.error("Error updating language:", error);
+    }
+  };
 
   if (isUserLoading || !user) {
     return (
@@ -46,8 +71,25 @@ export default function DashboardLayout({
           </div>
 
           <div className="flex items-center gap-4 ml-auto">
+            {/* Language Selector */}
+            <div className="flex items-center gap-2">
+              <Languages className="h-4 w-4 text-muted-foreground hidden sm:block" />
+              <Select 
+                value={profile?.languagePreference || 'english'} 
+                onValueChange={handleLanguageChange}
+              >
+                <SelectTrigger className="h-9 w-[100px] rounded-xl border-primary/20 bg-primary/5 text-xs font-bold">
+                  <SelectValue placeholder="Lang" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="english">English</SelectItem>
+                  <SelectItem value="hindi">हिंदी</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Weather Widget */}
-            <div className="hidden sm:flex items-center gap-3 px-4 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
+            <div className="hidden lg:flex items-center gap-3 px-4 py-1.5 bg-primary/10 border border-primary/20 rounded-full">
               <div className="text-right">
                 <p className="text-xs font-bold leading-none">32°C</p>
                 <p className="text-[10px] text-primary leading-none mt-0.5">Partly Cloudy</p>
@@ -67,8 +109,8 @@ export default function DashboardLayout({
 
             <div className="flex items-center gap-3 pl-2">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold leading-none">{user.displayName || user.email?.split('@')[0] || 'Farmer'}</p>
-                <p className="text-[10px] text-muted-foreground uppercase mt-1">Farmer Pro</p>
+                <p className="text-sm font-bold leading-none">{profile?.name || user.displayName || user.email?.split('@')[0] || 'Farmer'}</p>
+                <p className="text-[10px] text-muted-foreground uppercase mt-1">{profile?.subscriptionPlan || 'Farmer Pro'}</p>
               </div>
               <Avatar className="h-10 w-10 border-2 border-primary/20 rounded-xl">
                 <AvatarImage src={user.photoURL || `https://picsum.photos/seed/${user.uid}/40/40`} />

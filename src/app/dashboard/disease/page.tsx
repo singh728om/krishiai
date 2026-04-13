@@ -11,16 +11,26 @@ import { cropDiseaseDiagnosis, type CropDiseaseDiagnosisOutput } from "@/ai/flow
 import { toast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
+import { doc } from "firebase/firestore";
 
 export default function DiseaseDetectionPage() {
+  const { user } = useUser();
+  const db = useFirestore();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<CropDiseaseDiagnosisOutput | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
+  const userRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, "users", user.uid);
+  }, [db, user?.uid]);
+
+  const { data: profile } = useDoc(userRef);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file size (10MB limit)
       if (file.size > 10 * 1024 * 1024) {
         toast({
           title: "File too large",
@@ -44,15 +54,20 @@ export default function DiseaseDetectionPage() {
     setIsAnalyzing(true);
     setResult(null);
     try {
+      const selectedLanguage = profile?.languagePreference || "english";
+      const languagePrompt = selectedLanguage === 'hindi' ? "Hindi (हिंदी)" : "English";
+
       const response = await cropDiseaseDiagnosis({
         photoDataUri: dataUri,
-        language: "Hindi + English (Mix)"
+        language: languagePrompt
       });
 
       if (!response.isCrop) {
         toast({
-          title: "Invalid Image",
-          description: "The AI could not identify a crop in this photo. Please try a clearer shot of the plant.",
+          title: selectedLanguage === 'hindi' ? "अमान्य छवि" : "Invalid Image",
+          description: selectedLanguage === 'hindi' 
+            ? "एआई इस फोटो में फसल की पहचान नहीं कर सका। कृपया पौधे की स्पष्ट फोटो लें।" 
+            : "The AI could not identify a crop in this photo. Please try a clearer shot of the plant.",
           variant: "destructive"
         });
       }
@@ -83,11 +98,18 @@ export default function DiseaseDetectionPage() {
     <div className="max-w-4xl mx-auto space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-headline font-bold">Crop Disease Detection</h1>
-          <p className="text-muted-foreground">Upload a photo for instant AI diagnosis and treatment plan.</p>
+          <h1 className="text-3xl font-headline font-bold">
+            {profile?.languagePreference === 'hindi' ? 'फसल रोग पहचान' : 'Crop Disease Detection'}
+          </h1>
+          <p className="text-muted-foreground">
+            {profile?.languagePreference === 'hindi' 
+              ? 'त्वरित एआई निदान और उपचार योजना के लिए एक फोटो अपलोड करें।' 
+              : 'Upload a photo for instant AI diagnosis and treatment plan.'}
+          </p>
         </div>
         <Button variant="outline" className="rounded-xl">
-          <History className="mr-2 h-4 w-4" /> View History
+          <History className="mr-2 h-4 w-4" /> 
+          {profile?.languagePreference === 'hindi' ? 'इतिहास देखें' : 'View History'}
         </Button>
       </div>
 
@@ -103,8 +125,14 @@ export default function DiseaseDetectionPage() {
                   <Camera className="h-10 w-10 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold">Upload Crop Image</h3>
-                  <p className="text-sm text-muted-foreground max-w-[200px]">Capture the affected leaves or stems clearly</p>
+                  <h3 className="text-lg font-bold">
+                    {profile?.languagePreference === 'hindi' ? 'फसल की फोटो अपलोड करें' : 'Upload Crop Image'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground max-w-[200px]">
+                    {profile?.languagePreference === 'hindi' 
+                      ? 'प्रभावित पत्तियों या तनों को स्पष्ट रूप से कैद करें' 
+                      : 'Capture the affected leaves or stems clearly'}
+                  </p>
                 </div>
               </div>
             )}
@@ -124,9 +152,9 @@ export default function DiseaseDetectionPage() {
             onClick={() => document.getElementById('crop-upload')?.click()}
           >
             {isAnalyzing ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyzing Symptoms...</>
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {profile?.languagePreference === 'hindi' ? 'विश्लेषण हो रहा है...' : 'Analyzing Symptoms...'}</>
             ) : (
-              <><Upload className="mr-2 h-4 w-4" /> {preview ? 'Try Another Photo' : 'Select Photo'}</>
+              <><Upload className="mr-2 h-4 w-4" /> {preview ? (profile?.languagePreference === 'hindi' ? 'दूसरी फोटो चुनें' : 'Try Another Photo') : (profile?.languagePreference === 'hindi' ? 'फोटो चुनें' : 'Select Photo')}</>
             )}
           </Button>
           <p className="text-[10px] text-muted-foreground mt-4 uppercase tracking-widest font-bold">Recommended: High resolution JPG/PNG</p>
@@ -178,7 +206,8 @@ export default function DiseaseDetectionPage() {
                 {result.treatmentMedicines.length > 0 && (
                   <div className="space-y-2">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                      <Pill className="h-4 w-4 text-red-500" /> Recommended Treatments
+                      <Pill className="h-4 w-4 text-red-500" /> 
+                      {profile?.languagePreference === 'hindi' ? 'अनुशंसित उपचार' : 'Recommended Treatments'}
                     </h3>
                     <div className="flex flex-wrap gap-2">
                       {result.treatmentMedicines.map((med, i) => (
@@ -194,7 +223,8 @@ export default function DiseaseDetectionPage() {
                 {result.precautions.length > 0 && (
                   <div className="space-y-2">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                      <ShieldAlert className="h-4 w-4 text-blue-500" /> Precautions
+                      <ShieldAlert className="h-4 w-4 text-blue-500" /> 
+                      {profile?.languagePreference === 'hindi' ? 'सावधानियां' : 'Precautions'}
                     </h3>
                     <ul className="space-y-1 text-sm list-disc pl-5">
                       {result.precautions.map((prec, i) => (
@@ -207,7 +237,8 @@ export default function DiseaseDetectionPage() {
                 {/* Summary */}
                 <div className="space-y-2">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-primary" /> Diagnostic Advice
+                    <CheckCircle2 className="h-4 w-4 text-primary" /> 
+                    {profile?.languagePreference === 'hindi' ? 'नैदानिक सलाह' : 'Diagnostic Advice'}
                   </h3>
                   <div className="bg-muted/30 rounded-xl p-4 border border-dashed border-primary/30">
                     <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
@@ -222,8 +253,14 @@ export default function DiseaseDetectionPage() {
               <div className="p-4 bg-muted/50 rounded-full mb-4">
                 <AlertTriangle className="h-12 w-12" />
               </div>
-              <h3 className="text-lg font-bold text-foreground">No analysis performed</h3>
-              <p className="text-sm">Upload a photo to see the AI diagnosis here.</p>
+              <h3 className="text-lg font-bold text-foreground">
+                {profile?.languagePreference === 'hindi' ? 'कोई विश्लेषण नहीं' : 'No analysis performed'}
+              </h3>
+              <p className="text-sm">
+                {profile?.languagePreference === 'hindi' 
+                  ? 'एआई निदान यहाँ देखने के लिए एक फोटो अपलोड करें।' 
+                  : 'Upload a photo to see the AI diagnosis here.'}
+              </p>
             </div>
           )}
         </Card>
@@ -234,7 +271,8 @@ export default function DiseaseDetectionPage() {
         <Card className="rounded-2xl border-none shadow-sm overflow-hidden bg-white">
           <CardHeader className="px-6 py-4 border-b">
             <CardTitle className="text-lg flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-accent" /> Nearby Agro-Dealers for Medicines
+              <MapPin className="h-5 w-5 text-accent" /> 
+              {profile?.languagePreference === 'hindi' ? 'दवाओं के लिए नजदीकी कृषि विक्रेता' : 'Nearby Agro-Dealers for Medicines'}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -249,7 +287,7 @@ export default function DiseaseDetectionPage() {
                     <p className="text-xs text-muted-foreground">{dealer.dist} • {dealer.status}</p>
                   </div>
                   <Button size="sm" variant="outline" className="rounded-lg h-8 border-primary/30 text-primary hover:bg-primary/5">
-                    Call Provider
+                    {profile?.languagePreference === 'hindi' ? 'कॉल करें' : 'Call Provider'}
                   </Button>
                 </div>
               ))}
