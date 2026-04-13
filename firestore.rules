@@ -1,34 +1,7 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    /**
-     * KRISHIAI SECURITY RULES - PROTOTYPING MODE
-     * 
-     * Core Philosophy:
-     * This ruleset enforces a strict user-ownership model designed for the KrishiAI platform.
-     * All farmer-specific data is nested under unique user paths to ensure privacy and 
-     * structural segregation. Global reference data (Crops, Diseases, Market Prices) 
-     * is publicly readable by authenticated users but strictly protected for writes.
-     * 
-     * Data Structure:
-     * - /users/{userId}: Private profile data.
-     * - /users/{userId}/farms/{farmId}: Hierarchical farm management.
-     * - /fpos/{fpoId}: Shared access model for Farmer Producer Organizations.
-     * - /crops, /diseases, /mandis: Global reference collections.
-     * 
-     * Key Security Decisions:
-     * 1. Authorization Independence: Critical fields like 'ownerId' or 'members' maps are 
-     *    denormalized onto documents to allow fast, direct security checks without 
-     *    expensive cross-document reads (get() calls).
-     * 2. Prototyping Flexibility: Rules enforce WHO can access data and relational integrity 
-     *    (e.g., ensuring a farm's ownerId matches the user path), but do not restrict 
-     *    the specific internal data types (strings vs. numbers) to allow rapid iteration.
-     * 3. Global Admin Roles: A dedicated '/app_roles/admin/{userId}' collection enables 
-     *    the system to identify administrators for managing global reference data.
-     */
-
-    // --- Helper Functions ---
 
     function isSignedIn() {
       return request.auth != null;
@@ -38,173 +11,31 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
-    }
-
-    function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/app_roles/admin/$(request.auth.uid));
-    }
-
-    /**
-     * Checks if the user is part of an FPO based on a denormalized members map.
-     * The map structure expected is { 'uid1': 'role', 'uid2': 'role' }.
-     */
-    function isFPOMember(memberMap) {
-      return isSignedIn() && memberMap[request.auth.uid] != null;
-    }
-
-    function isFPOAdmin(memberMap) {
-      return isSignedIn() && memberMap[request.auth.uid] == 'admin';
-    }
-
-    // --- Collection Rules ---
-
-    /**
-     * @description Rules for user profiles. Allows users to create their own profile during signup.
-     * @path /users/{userId}
-     * @allow (create) if auth.uid == userId; (update) if auth.uid == userId and document exists.
-     * @deny (create) if auth.uid != userId.
-     * @principle Ownership and path-to-data consistency.
-     */
     match /users/{userId} {
       allow get, list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
-
-      /**
-       * @description Farm details owned by a specific user.
-       * @path /users/{userId}/farms/{farmId}
-       * @allow (create) if userId matches path and ownerId in data matches auth.uid.
-       * @principle Hierarchical ownership with denormalized ownerId validation.
-       */
-      match /farms/{farmId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.ownerId == request.auth.uid;
-        allow update: if isExistingOwner(userId) && request.resource.data.ownerId == resource.data.ownerId;
-        allow delete: if isExistingOwner(userId);
-
-        /**
-         * @description Records of AI-powered disease detection scans.
-         */
-        match /diseaseScans/{scanId} {
-          allow get, list: if isOwner(userId);
-          allow create: if isOwner(userId);
-          allow update: if isExistingOwner(userId);
-          allow delete: if isExistingOwner(userId);
-        }
-
-        /**
-         * @description AI-generated yield predictions.
-         */
-        match /yieldPredictions/{predictionId} {
-          allow get, list: if isOwner(userId);
-          allow create: if isOwner(userId);
-          allow update: if isExistingOwner(userId);
-          allow delete: if isExistingOwner(userId);
-        }
-
-        /**
-         * @description Carbon credit transaction history.
-         */
-        match /carbonCreditTransactions/{transactionId} {
-          allow get, list: if isOwner(userId);
-          allow create: if isOwner(userId);
-          allow update: if isExistingOwner(userId);
-          allow delete: if isExistingOwner(userId);
-        }
-      }
-
-      /**
-       * @description User-specific notifications and alerts.
-       */
-      match /alerts/{alertId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.recipientUserId == request.auth.uid;
-        allow update: if isExistingOwner(userId);
-        allow delete: if isExistingOwner(userId);
-      }
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
     }
 
-    /**
-     * @description Global reference data for Crops.
-     * @path /crops/{cropId}
-     * @allow (read) for any authenticated user. (write) only for app admins.
-     * @principle Public read with admin-only writes.
-     */
+    match /equipmentServices/{serviceId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.providerId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.providerId == request.auth.uid;
+    }
+
+    match /laborServices/{serviceId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.providerId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.providerId == request.auth.uid;
+    }
+
     match /crops/{cropId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isAdmin();
+      allow read: if isSignedIn();
     }
-
-    /**
-     * @description Global reference data for Crop Diseases.
-     */
+    
     match /diseases/{diseaseId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isAdmin();
+      allow read: if isSignedIn();
     }
-
-    /**
-     * @description Global reference data for Market Commodities.
-     */
-    match /commodities/{commodityId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isAdmin();
-    }
-
-    /**
-     * @description Global reference data for Agricultural Mandis (Markets).
-     */
-    match /mandis/{mandiId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isAdmin();
-    }
-
-    /**
-     * @description Global records of mandi prices.
-     */
-    match /mandiCommodityPrices/{priceId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isAdmin();
-    }
-
-    /**
-     * @description Collaborative data for Farmer Producer Organizations.
-     * @path /fpos/{fpoId}
-     * @allow (read) if user is in the 'members' map. (update) if user is 'admin' in members map.
-     * @principle Shared access using map-based roles.
-     */
-    match /fpos/{fpoId} {
-      allow get: if isFPOMember(resource.data.members);
-      allow list: if isSignedIn(); // Listable but query must filter by membership
-      allow create: if isSignedIn(); // Allow creation, user should probably set themselves as admin
-      allow update: if isFPOAdmin(resource.data.members);
-      allow delete: if isFPOAdmin(resource.data.members);
-
-      /**
-       * @description Membership records within an FPO.
-       */
-      match /members/{farmerId} {
-        // Access is granted if the user is the farmer themselves OR an FPO Admin
-        allow get: if isOwner(farmerId) || isFPOAdmin(resource.data.fpoMembers);
-        allow list: if isFPOMember(resource.data.fpoMembers);
-        allow create: if isSignedIn(); // Usually handled by FPO invite flow
-        allow update: if isFPOAdmin(resource.data.fpoMembers) || isOwner(farmerId);
-        allow delete: if isFPOAdmin(resource.data.fpoMembers);
-      }
-    }
-
-    /**
-     * @description Security rules for the administrative roles collection.
-     * @path /app_roles/admin/{userId}
-     * @principle Role-based access control via document existence.
-     */
-    match /app_roles/admin/{userId} {
-      allow get: if isSignedIn();
-      allow list, create, update, delete: if false; // Managed via Firebase Console or Admin SDK
-    }
-
   }
 }

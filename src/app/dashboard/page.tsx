@@ -14,7 +14,8 @@ import {
   AlertTriangle,
   ArrowUpRight,
   TrendingDown,
-  Calendar
+  Calendar,
+  Truck
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -32,7 +33,7 @@ export default function Dashboard() {
       {/* Header Info */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-headline font-bold">Welcome back, Ramesh</h1>
+          <h1 className="text-3xl font-headline font-bold">Welcome back, Farmer</h1>
           <p className="text-muted-foreground">Here's what's happening at your farm in Wardha today.</p>
         </div>
         <div className="flex items-center gap-3">
@@ -141,8 +142,9 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {[
+          { label: "Book Tractor", icon: Truck, href: "/dashboard/services" },
           { label: "Upload Crop Photo", icon: Smartphone, href: "/dashboard/disease" },
           { label: "Get Yield Advisory", icon: BrainCircuit, href: "/dashboard/yield" },
           { label: "Sell Carbon Credits", icon: Coins, href: "/dashboard/carbon" },

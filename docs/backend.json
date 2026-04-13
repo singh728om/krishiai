@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -40,26 +41,17 @@
         },
         "farmIds": {
           "type": "array",
-          "description": "References to Farm entities owned by this user. (Relationship: UserProfile 1:N Farm)",
-          "items": {
-            "type": "string"
-          }
-        },
-        "connectedIntegrations": {
-          "type": "array",
-          "description": "An array of names of external integrations connected by the user (e.g., 'PMFBY', 'eNAM', 'Aadhaar').",
+          "description": "References to Farm entities owned by this user.",
           "items": {
             "type": "string"
           }
         },
         "createdAt": {
           "type": "string",
-          "description": "Timestamp when the user profile was created.",
           "format": "date-time"
         },
         "updatedAt": {
           "type": "string",
-          "description": "Timestamp when the user profile was last updated.",
           "format": "date-time"
         }
       },
@@ -72,673 +64,57 @@
         "subscriptionPlan"
       ]
     },
-    "Farm": {
+    "EquipmentService": {
       "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "EquipmentService",
+      "type": "object",
+      "description": "A listing for farm equipment available for rent (e.g., Tractors, Harvesters).",
+      "properties": {
+        "id": { "type": "string" },
+        "providerId": { "type": "string", "description": "UID of the service provider." },
+        "providerName": { "type": "string" },
+        "equipmentType": { "type": "string", "enum": ["Tractor", "Harvester", "Plough", "Seeder", "Other"] },
+        "description": { "type": "string" },
+        "village": { "type": "string" },
+        "district": { "type": "string" },
+        "pricePerHour": { "type": "number" },
+        "contactPhone": { "type": "string" },
+        "status": { "type": "string", "enum": ["Available", "Busy", "Maintenance"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "providerId", "equipmentType", "village", "pricePerHour", "contactPhone"]
+    },
+    "LaborService": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LaborService",
+      "type": "object",
+      "description": "A listing for agricultural labor groups or contractors.",
+      "properties": {
+        "id": { "type": "string" },
+        "providerId": { "type": "string" },
+        "contractorName": { "type": "string" },
+        "serviceType": { "type": "string", "enum": ["Sowing", "Harvesting", "Weeding", "Pesticide Spray", "General"] },
+        "village": { "type": "string" },
+        "district": { "type": "string" },
+        "laborCount": { "type": "number" },
+        "pricePerDayPerPerson": { "type": "number" },
+        "contactPhone": { "type": "string" },
+        "availability": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "providerId", "serviceType", "village", "pricePerDayPerPerson", "contactPhone"]
+    },
+    "Farm": {
       "title": "Farm",
       "type": "object",
-      "description": "Represents a specific agricultural land plot or farming operation managed by a user.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Farm entity."
-        },
-        "ownerId": {
-          "type": "string",
-          "description": "Reference to the UserProfile who owns this farm. (Relationship: UserProfile 1:N Farm)"
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the farm."
-        },
-        "locationDistrict": {
-          "type": "string",
-          "description": "The district where the farm is located."
-        },
-        "locationState": {
-          "type": "string",
-          "description": "The state where the farm is located."
-        },
-        "latitude": {
-          "type": "number",
-          "description": "Geographical latitude of the farm's approximate center."
-        },
-        "longitude": {
-          "type": "number",
-          "description": "Geographical longitude of the farm's approximate center."
-        },
-        "acreage": {
-          "type": "number",
-          "description": "The total land size of the farm in acres."
-        },
-        "primaryCropIds": {
-          "type": "array",
-          "description": "References to the primary Crop entities grown on this farm. (Relationship: Farm N:N Crop)",
-          "items": {
-            "type": "string"
-          }
-        },
-        "soilType": {
-          "type": "string",
-          "description": "The type of soil prevalent on the farm (e.g., 'Black', 'Alluvial', 'Red')."
-        },
-        "irrigationType": {
-          "type": "string",
-          "description": "The primary irrigation method used on the farm (e.g., 'Rainfed', 'Well', 'Canal')."
-        },
-        "healthScore": {
-          "type": "number",
-          "description": "An overall health score (0-100) for the farm, derived from AI analysis."
-        },
-        "carbonCreditsEarned": {
-          "type": "number",
-          "description": "Total carbon credits (tonnes CO₂) earned by this farm."
-        },
-        "seasonPnl": {
-          "type": "number",
-          "description": "Projected or actual Profit & Loss for the current/last season in INR."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the farm record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the farm record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "ownerId",
-        "name",
-        "locationDistrict",
-        "locationState",
-        "acreage"
-      ]
-    },
-    "Crop": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Crop",
-      "type": "object",
-      "description": "Defines a type of agricultural crop (e.g., Cotton, Wheat, Tomato).",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Crop entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The common name of the crop (e.g., 'Cotton', 'Rice')."
-        },
-        "botanicalName": {
-          "type": "string",
-          "description": "The botanical or scientific name of the crop."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description of the crop."
-        },
-        "averageYieldRangeMin": {
-          "type": "number",
-          "description": "Minimum average yield for this crop (e.g., in quintals/acre)."
-        },
-        "averageYieldRangeMax": {
-          "type": "number",
-          "description": "Maximum average yield for this crop (e.g., in quintals/acre)."
-        },
-        "yieldUnit": {
-          "type": "string",
-          "description": "The unit of measure for yield (e.g., 'quintals/acre')."
-        },
-        "commonDiseaseIds": {
-          "type": "array",
-          "description": "References to Disease entities commonly affecting this crop. (Relationship: Crop N:N Disease)",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "required": [
-        "id",
-        "name"
-      ]
-    },
-    "Disease": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Disease",
-      "type": "object",
-      "description": "Information about a specific crop disease, used for detection and recommendations.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Disease entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The common name of the disease (e.g., 'Late Blight')."
-        },
-        "affectedCropIds": {
-          "type": "array",
-          "description": "References to Crop entities that this disease commonly affects. (Relationship: Disease N:N Crop)",
-          "items": {
-            "type": "string"
-          }
-        },
-        "symptomsEnglish": {
-          "type": "string",
-          "description": "Description of disease symptoms in English."
-        },
-        "symptomsVernacular": {
-          "type": "string",
-          "description": "Description of disease symptoms in vernacular language (Hindi)."
-        },
-        "recommendedTreatmentEnglish": {
-          "type": "string",
-          "description": "General treatment recommendations for the disease in English."
-        },
-        "recommendedTreatmentVernacular": {
-          "type": "string",
-          "description": "General treatment recommendations for the disease in vernacular language (Hindi)."
-        },
-        "preventionMeasuresEnglish": {
-          "type": "string",
-          "description": "Preventive measures against the disease in English."
-        },
-        "preventionMeasuresVernacular": {
-          "type": "string",
-          "description": "Preventive measures against the disease in vernacular language (Hindi)."
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "affectedCropIds"
-      ]
-    },
-    "DiseaseScan": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "DiseaseScan",
-      "type": "object",
-      "description": "A record of a crop disease detection scan performed by a farmer using the AI tool.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the DiseaseScan entity."
-        },
-        "farmId": {
-          "type": "string",
-          "description": "Reference to the Farm where the scan was performed. (Relationship: Farm 1:N DiseaseScan)"
-        },
-        "cropId": {
-          "type": "string",
-          "description": "Reference to the Crop type that was scanned. (Relationship: Crop 1:N DiseaseScan)"
-        },
-        "scanDate": {
-          "type": "string",
-          "description": "The date and time when the crop photo was scanned.",
-          "format": "date-time"
-        },
-        "imageUrl": {
-          "type": "string",
-          "description": "URL to the uploaded crop photo image.",
-          "format": "uri"
-        },
-        "detectedDiseaseId": {
-          "type": "string",
-          "description": "Reference to the Disease entity identified by the AI. (Relationship: Disease 1:N DiseaseScan)"
-        },
-        "confidenceScore": {
-          "type": "number",
-          "description": "The AI's confidence score (0-100) for the detected disease."
-        },
-        "severity": {
-          "type": "string",
-          "description": "The assessed severity of the disease (e.g., 'Mild', 'Moderate', 'Severe')."
-        },
-        "affectedAreaPercentage": {
-          "type": "number",
-          "description": "Estimated percentage of the crop area affected by the disease."
-        },
-        "treatmentRecommendationEnglish": {
-          "type": "string",
-          "description": "Specific treatment recommendation generated by AI for this scan in English."
-        },
-        "treatmentRecommendationVernacular": {
-          "type": "string",
-          "description": "Specific treatment recommendation generated by AI for this scan in vernacular language (Hindi)."
-        },
-        "agroDealerLocatorInfo": {
-          "type": "string",
-          "description": "JSON string or text providing information about nearby agro-dealers, if available."
-        }
-      },
-      "required": [
-        "id",
-        "farmId",
-        "cropId",
-        "scanDate",
-        "imageUrl",
-        "detectedDiseaseId",
-        "confidenceScore",
-        "severity"
-      ]
-    },
-    "YieldPrediction": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "YieldPrediction",
-      "type": "object",
-      "description": "A record of a crop yield prediction generated by the AI for a specific farm and crop.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the YieldPrediction entity."
-        },
-        "farmId": {
-          "type": "string",
-          "description": "Reference to the Farm for which the prediction was made. (Relationship: Farm 1:N YieldPrediction)"
-        },
-        "cropId": {
-          "type": "string",
-          "description": "Reference to the Crop type for which the prediction was made. (Relationship: Crop 1:N YieldPrediction)"
-        },
-        "predictionDate": {
-          "type": "string",
-          "description": "The date and time when the yield prediction was generated.",
-          "format": "date-time"
-        },
-        "sowingDate": {
-          "type": "string",
-          "description": "The sowing date provided as input for the prediction.",
-          "format": "date"
-        },
-        "predictedYieldMin": {
-          "type": "number",
-          "description": "The minimum predicted yield in the specified unit."
-        },
-        "predictedYieldMax": {
-          "type": "number",
-          "description": "The maximum predicted yield in the specified unit."
-        },
-        "yieldUnit": {
-          "type": "string",
-          "description": "The unit of measure for the predicted yield (e.g., 'quintals/acre')."
-        },
-        "advisoryRecommendationEnglish": {
-          "type": "string",
-          "description": "AI-generated advisory actions to improve yield in English."
-        },
-        "advisoryRecommendationVernacular": {
-          "type": "string",
-          "description": "AI-generated advisory actions to improve yield in vernacular language (Hindi)."
-        },
-        "districtAverageYield": {
-          "type": "number",
-          "description": "Average yield for the same crop in the district for comparison."
-        },
-        "stateAverageYield": {
-          "type": "number",
-          "description": "Average yield for the same crop in the state for comparison."
-        },
-        "historicalYields": {
-          "type": "array",
-          "description": "An array of historical yield data for this crop on this farm, including season, year, and yield.",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "required": [
-        "id",
-        "farmId",
-        "cropId",
-        "predictionDate",
-        "sowingDate",
-        "predictedYieldMin",
-        "predictedYieldMax",
-        "yieldUnit"
-      ]
-    },
-    "CarbonCreditTransaction": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "CarbonCreditTransaction",
-      "type": "object",
-      "description": "Records details of carbon credits earned, sold, or pending verification for a farm.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the CarbonCreditTransaction entity."
-        },
-        "farmId": {
-          "type": "string",
-          "description": "Reference to the Farm associated with this transaction. (Relationship: Farm 1:N CarbonCreditTransaction)"
-        },
-        "type": {
-          "type": "string",
-          "description": "The type of carbon credit transaction (e.g., 'earned', 'sold', 'pending_verification')."
-        },
-        "tonnesCO2": {
-          "type": "number",
-          "description": "The amount of CO₂ sequestered or transacted in tonnes."
-        },
-        "transactionDate": {
-          "type": "string",
-          "description": "The date of the transaction or earning event.",
-          "format": "date-time"
-        },
-        "pricePerTonneUSD": {
-          "type": "number",
-          "description": "Price per tonne of CO₂ in USD at the time of transaction, if applicable."
-        },
-        "pricePerTonneINR": {
-          "type": "number",
-          "description": "Price per tonne of CO₂ in INR at the time of transaction, if applicable."
-        },
-        "buyerName": {
-          "type": "string",
-          "description": "Name of the corporate buyer if credits were sold."
-        },
-        "verificationStatus": {
-          "type": "string",
-          "description": "Current status in the verification timeline (e.g., 'Data collected', 'Satellite verified', 'Credit issued', 'Sold')."
-        },
-        "payoutAmountINR": {
-          "type": "number",
-          "description": "The total payout amount received in INR for sold credits."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the transaction record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the transaction record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "farmId",
-        "type",
-        "tonnesCO2",
-        "transactionDate",
-        "verificationStatus"
-      ]
-    },
-    "Commodity": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Commodity",
-      "type": "object",
-      "description": "Defines an agricultural commodity for market intelligence.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Commodity entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The common name of the commodity (e.g., 'Wheat', 'Rice', 'Cotton')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description of the commodity."
-        },
-        "unit": {
-          "type": "string",
-          "description": "The standard unit of measure for this commodity (e.g., 'quintal', 'kg')."
-        },
-        "msp": {
-          "type": "number",
-          "description": "The Minimum Support Price (MSP) for this commodity in INR per unit."
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "unit"
-      ]
-    },
-    "Mandi": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Mandi",
-      "type": "object",
-      "description": "Information about a local agricultural market (mandi).",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Mandi entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the mandi."
-        },
-        "locationDistrict": {
-          "type": "string",
-          "description": "The district where the mandi is located."
-        },
-        "locationState": {
-          "type": "string",
-          "description": "The state where the mandi is located."
-        },
-        "latitude": {
-          "type": "number",
-          "description": "Geographical latitude of the mandi."
-        },
-        "longitude": {
-          "type": "number",
-          "description": "Geographical longitude of the mandi."
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "locationDistrict",
-        "locationState"
-      ]
-    },
-    "MandiCommodityPrice": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "MandiCommodityPrice",
-      "type": "object",
-      "description": "Records the price of a specific commodity at a particular mandi at a given time.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the MandiCommodityPrice entity."
-        },
-        "mandiId": {
-          "type": "string",
-          "description": "Reference to the Mandi where the price was recorded. (Relationship: Mandi 1:N MandiCommodityPrice)"
-        },
-        "commodityId": {
-          "type": "string",
-          "description": "Reference to the Commodity whose price is being recorded. (Relationship: Commodity 1:N MandiCommodityPrice)"
-        },
-        "price": {
-          "type": "number",
-          "description": "The current price of the commodity at this mandi in INR per unit."
-        },
-        "trend7Day": {
-          "type": "number",
-          "description": "The percentage change in price over the last 7 days."
-        },
-        "lastUpdated": {
-          "type": "string",
-          "description": "Timestamp when this price record was last updated.",
-          "format": "date-time"
-        },
-        "bestTimeToSellPrediction": {
-          "type": "string",
-          "description": "AI prediction on the optimal time to sell this commodity, if applicable."
-        }
-      },
-      "required": [
-        "id",
-        "mandiId",
-        "commodityId",
-        "price",
-        "lastUpdated"
-      ]
-    },
-    "Alert": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Alert",
-      "type": "object",
-      "description": "Represents a notification or advisory sent to a farmer or an FPO.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Alert entity."
-        },
-        "recipientUserId": {
-          "type": "string",
-          "description": "Reference to the UserProfile who is the direct recipient of this alert. (Relationship: UserProfile 1:N Alert)"
-        },
-        "farmId": {
-          "type": "string",
-          "description": "Reference to the Farm this alert is related to, if applicable. (Relationship: Farm 1:N Alert)"
-        },
-        "fpoId": {
-          "type": "string",
-          "description": "Reference to the FPO this alert is related to, if applicable. (Relationship: FPO 1:N Alert)"
-        },
-        "type": {
-          "type": "string",
-          "description": "The category of the alert (e.g., 'disease warning', 'weather alert', 'market price change', 'general advisory')."
-        },
-        "messageEnglish": {
-          "type": "string",
-          "description": "The alert message in English."
-        },
-        "messageVernacular": {
-          "type": "string",
-          "description": "The alert message in vernacular language (Hindi/regional)."
-        },
-        "severity": {
-          "type": "string",
-          "description": "The severity level of the alert (e.g., 'Info', 'Warning', 'Critical')."
-        },
-        "alertDate": {
-          "type": "string",
-          "description": "The date and time when the alert was issued.",
-          "format": "date-time"
-        },
-        "isRead": {
-          "type": "boolean",
-          "description": "Indicates if the alert has been read by the recipient."
-        }
-      },
-      "required": [
-        "id",
-        "recipientUserId",
-        "type",
-        "messageEnglish",
-        "alertDate"
-      ]
-    },
-    "FPO": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "FPO",
-      "type": "object",
-      "description": "Represents a Farmer Producer Organization or Cooperative using the B2B portal.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the FPO entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the Farmer Producer Organization."
-        },
-        "locationDistrict": {
-          "type": "string",
-          "description": "The primary district of operation for the FPO."
-        },
-        "locationState": {
-          "type": "string",
-          "description": "The primary state of operation for the FPO."
-        },
-        "contactEmail": {
-          "type": "string",
-          "description": "Contact email for the FPO.",
-          "format": "email"
-        },
-        "contactPhone": {
-          "type": "string",
-          "description": "Contact phone number for the FPO."
-        },
-        "totalLandUnderManagement": {
-          "type": "number",
-          "description": "Aggregate land size managed by all member farmers in acres."
-        },
-        "aggregateYield": {
-          "type": "number",
-          "description": "Average yield across all member farms."
-        },
-        "totalCarbonCredits": {
-          "type": "number",
-          "description": "Total carbon credits sequestered by all member farms."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the FPO record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the FPO record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "locationDistrict",
-        "locationState",
-        "contactEmail"
-      ]
-    },
-    "FPOMember": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "FPOMember",
-      "type": "object",
-      "description": "Associates a UserProfile (farmer) with an FPO, indicating their membership.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the FPOMember entity."
-        },
-        "fpoId": {
-          "type": "string",
-          "description": "Reference to the FPO this member belongs to. (Relationship: FPO 1:N FPOMember)"
-        },
-        "farmerId": {
-          "type": "string",
-          "description": "Reference to the UserProfile representing the farmer member. (Relationship: UserProfile 1:N FPOMember)"
-        },
-        "role": {
-          "type": "string",
-          "description": "The role of the farmer within the FPO (e.g., 'member', 'admin', 'coordinator')."
-        },
-        "joinedDate": {
-          "type": "string",
-          "description": "The date when the farmer joined the FPO.",
-          "format": "date"
-        },
-        "lastActive": {
-          "type": "string",
-          "description": "Timestamp of the farmer's last activity within the FPO context.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "fpoId",
-        "farmerId",
-        "role",
-        "joinedDate"
-      ]
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "locationDistrict": { "type": "string" },
+        "locationState": { "type": "string" },
+        "acreage": { "type": "number" }
+      }
     }
   },
   "auth": {
@@ -753,247 +129,26 @@
         "path": "/users/{userId}",
         "definition": {
           "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Stores individual user profile data. Each document's ID corresponds to the Firebase Authentication UID of the user. This path enforces private data access, accessible only by the user matching `userId`."
+          "schema": { "$ref": "#/backend/entities/UserProfile" },
+          "description": "Stores individual user profile data."
         }
       },
       {
-        "path": "/users/{userId}/farms/{farmId}",
+        "path": "/equipmentServices/{serviceId}",
         "definition": {
-          "entityName": "Farm",
-          "schema": {
-            "$ref": "#/backend/entities/Farm"
-          },
-          "description": "Stores details for each farm owned by a specific user. This follows hierarchical path-based ownership. The document includes the `ownerId` field (matching `userId`) which serves as a denormalized authorization field for security rules, ensuring Authorization Independence. Access is restricted to the farm's owner."
+          "entityName": "EquipmentService",
+          "schema": { "$ref": "#/backend/entities/EquipmentService" },
+          "description": "Public listings for farm equipment services."
         }
       },
       {
-        "path": "/users/{userId}/farms/{farmId}/diseaseScans/{diseaseScanId}",
+        "path": "/laborServices/{serviceId}",
         "definition": {
-          "entityName": "DiseaseScan",
-          "schema": {
-            "$ref": "#/backend/entities/DiseaseScan"
-          },
-          "description": "Records AI-powered disease detection scans for a specific farm. This path maintains hierarchical ownership. The document includes a denormalized `ownerId` (the `UserProfile` ID of the farm owner) from the parent farm for Authorization Independence, allowing direct rule checks without `get()` operations. Access is restricted to the farm's owner.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user who owns the farm."
-            },
-            {
-              "name": "farmId",
-              "description": "The unique ID of the farm where the scan was performed."
-            },
-            {
-              "name": "diseaseScanId",
-              "description": "The unique ID of the disease scan record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/farms/{farmId}/yieldPredictions/{yieldPredictionId}",
-        "definition": {
-          "entityName": "YieldPrediction",
-          "schema": {
-            "$ref": "#/backend/entities/YieldPrediction"
-          },
-          "description": "Stores AI-generated yield predictions for a specific farm. This path maintains hierarchical ownership. The document includes a denormalized `ownerId` (the `UserProfile` ID of the farm owner) from the parent farm for Authorization Independence, allowing direct rule checks without `get()` operations. Access is restricted to the farm's owner.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user who owns the farm."
-            },
-            {
-              "name": "farmId",
-              "description": "The unique ID of the farm for which the prediction was made."
-            },
-            {
-              "name": "yieldPredictionId",
-              "description": "The unique ID of the yield prediction record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/farms/{farmId}/carbonCreditTransactions/{transactionId}",
-        "definition": {
-          "entityName": "CarbonCreditTransaction",
-          "schema": {
-            "$ref": "#/backend/entities/CarbonCreditTransaction"
-          },
-          "description": "Records carbon credit transactions for a specific farm. This path maintains hierarchical ownership. The document includes a denormalized `ownerId` (the `UserProfile` ID of the farm owner) from the parent farm for Authorization Independence, allowing direct rule checks without `get()` operations. Access is restricted to the farm's owner.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user who owns the farm."
-            },
-            {
-              "name": "farmId",
-              "description": "The unique ID of the farm associated with this transaction."
-            },
-            {
-              "name": "transactionId",
-              "description": "The unique ID of the carbon credit transaction."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/alerts/{alertId}",
-        "definition": {
-          "entityName": "Alert",
-          "schema": {
-            "$ref": "#/backend/entities/Alert"
-          },
-          "description": "Stores personalized alerts and notifications for a user. The `recipientUserId` field in the document (matching `userId`) serves as the denormalized authorization field, ensuring Authorization Independence. Access is restricted to the `recipientUserId`.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user who is the recipient of the alert."
-            },
-            {
-              "name": "alertId",
-              "description": "The unique ID of the alert record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/crops/{cropId}",
-        "definition": {
-          "entityName": "Crop",
-          "schema": {
-            "$ref": "#/backend/entities/Crop"
-          },
-          "description": "Global collection defining various agricultural crop types. This data is public and read-only for all authenticated users. Write access is restricted to application administrators (via separate roles).",
-          "params": [
-            {
-              "name": "cropId",
-              "description": "The unique ID of the crop type."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/diseases/{diseaseId}",
-        "definition": {
-          "entityName": "Disease",
-          "schema": {
-            "$ref": "#/backend/entities/Disease"
-          },
-          "description": "Global collection providing information on crop diseases. This data is public and read-only for all authenticated users. Write access is restricted to application administrators.",
-          "params": [
-            {
-              "name": "diseaseId",
-              "description": "The unique ID of the disease."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/commodities/{commodityId}",
-        "definition": {
-          "entityName": "Commodity",
-          "schema": {
-            "$ref": "#/backend/entities/Commodity"
-          },
-          "description": "Global collection defining agricultural commodities for market intelligence. This data is public and read-only for all authenticated users. Write access is restricted to application administrators.",
-          "params": [
-            {
-              "name": "commodityId",
-              "description": "The unique ID of the commodity."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/mandis/{mandiId}",
-        "definition": {
-          "entityName": "Mandi",
-          "schema": {
-            "$ref": "#/backend/entities/Mandi"
-          },
-          "description": "Global collection providing information about agricultural markets (mandis). This data is public and read-only for all authenticated users. Write access is restricted to application administrators.",
-          "params": [
-            {
-              "name": "mandiId",
-              "description": "The unique ID of the mandi."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/mandiCommodityPrices/{mandiCommodityPriceId}",
-        "definition": {
-          "entityName": "MandiCommodityPrice",
-          "schema": {
-            "$ref": "#/backend/entities/MandiCommodityPrice"
-          },
-          "description": "Global collection storing price records for commodities at various mandis. This data is public and read-only for all authenticated users. Write access is restricted to application administrators. Includes `mandiId` and `commodityId` for context.",
-          "params": [
-            {
-              "name": "mandiCommodityPriceId",
-              "description": "The unique ID of the mandi commodity price record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/fpos/{fpoId}",
-        "definition": {
-          "entityName": "FPO",
-          "schema": {
-            "$ref": "#/backend/entities/FPO"
-          },
-          "description": "Represents a Farmer Producer Organization. Documents must include a denormalized `members` map (e.g., `members: { 'uid1': 'admin', 'uid2': 'member' }`) for direct access control to FPO data by its designated administrators and members, ensuring Authorization Independence. `list` operations are secure using queries on this map.",
-          "params": [
-            {
-              "name": "fpoId",
-              "description": "The unique ID of the Farmer Producer Organization."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/fpos/{fpoId}/members/{farmerId}",
-        "definition": {
-          "entityName": "FPOMember",
-          "schema": {
-            "$ref": "#/backend/entities/FPOMember"
-          },
-          "description": "Associates a UserProfile (farmer) with an FPO. The `farmerId` in the path corresponds to the `UserProfile.id` of the member. Documents must include a denormalized `fpoMembers` map (or similar) from the parent `FPO` document, particularly roles like `admin`, to facilitate authorization for managing FPO members without requiring a `get()` call to the parent FPO, upholding Authorization Independence. Access is typically for the member themselves or FPO admins.",
-          "params": [
-            {
-              "name": "fpoId",
-              "description": "The unique ID of the FPO this member belongs to."
-            },
-            {
-              "name": "farmerId",
-              "description": "The unique ID of the farmer (UserProfile) who is a member of the FPO. This is also the document ID."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/app_roles/admin/{userId}",
-        "definition": {
-          "entityName": "AppRole",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "A dedicated collection for managing global application administrator roles using the DBAC (Database Access Control) pattern. The existence of a document at this path signifies that the `userId` has admin privileges. This ensures Authorization Independence by allowing simple `exists()` checks in security rules for global write access to public collections (e.g., `crops`, `diseases`).",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user who holds the admin role."
-            }
-          ]
+          "entityName": "LaborService",
+          "schema": { "$ref": "#/backend/entities/LaborService" },
+          "description": "Public listings for agricultural labor services."
         }
       }
-    ],
-    "reasoning": "The Firestore data structure for KrishiAI is designed with a strong emphasis on Authorization Independence, Structural Segregation, and consistent Access Modeling to ensure robust security rules and efficient querying. \n\n**Authorization Independence (CRITICAL):** This is achieved by systematically denormalizing authorization-relevant fields into every document that requires access control. For instance, all user-owned subcollections like `/users/{userId}/farms/{farmId}`, `/users/{userId}/farms/{farmId}/diseaseScans/{diseaseScanId}`, `/users/{userId}/farms/{farmId}/yieldPredictions/{yieldPredictionId}`, and `/users/{userId}/farms/{farmId}/carbonCreditTransactions/{transactionId}` will contain an `ownerId` field. This `ownerId` directly corresponds to the `userId` in the path, allowing security rules to validate `request.auth.uid == resource.data.ownerId` without performing expensive and non-atomic `get()` operations on parent documents. Similarly, for collaborative data like FPOs, the `FPO` document itself includes a `members` map, and each `FPOMember` document within an FPO subcollection will also denormalize relevant FPO membership/admin roles (e.g., `fpoMembers` map) from its parent `FPO` document. This allows membership and role checks for `FPOMember` documents without a `get()` to the parent FPO.\n\n**QAPs (Rules are not Filters):** The structure facilitates secure `list` operations primarily through path-based ownership and denormalized fields. \n1. **User-Owned Data:** For private user data, the hierarchical paths (`/users/{userId}/...`) naturally scope list operations to the authenticated user's ID, ensuring that a user can only list their own farms, scans, predictions, transactions, and alerts. This inherently supports `list` with `where('ownerId', '==', request.auth.uid)` or simply `read` rules at the path level `match /users/{userId=request.auth.uid}/...`. \n2. **Collaborative Data (FPOs):** The `FPO` collection documents contain a `members` map. A user can securely list FPOs they belong to by querying `where('members.' + request.auth.uid, '!=', null)`. For listing `FPOMember` documents within an FPO, the denormalized `fpoMembers` map in each `FPOMember` document allows rules to verify if the requesting user is an authorized FPO member or admin, thus supporting QAP-compliant `list` operations on subcollections.\n3. **Global Reference Data:** Collections like `crops`, `diseases`, `commodities`, `mandis`, and `mandiCommodityPrices` are designed as top-level collections with a homogeneous security posture (read-only for all authenticated users, writeable by specific 'admin' roles). This allows all authenticated users to `list` these public reference data without security concerns, adhering to the QAP principle.\n\n**Structural Segregation:** Each collection maintains a homogeneous security posture. For example, `UserProfile` documents are strictly private to the user, while `Crop` documents are global and read-only. This avoids complex conditional logic in security rules and makes the intent clear and debuggable.\n\n**Access Modeling:** Path-based ownership (`/users/{userId}/...`) is consistently used for private user data. Collaborative data (FPOs) leverage a membership map for granular role-based access. Global read-only data (e.g., `crops`) are in separate top-level collections. Admin roles are managed via an existence-over-content pattern in a dedicated `/app_roles/admin/{userId}` collection."
+    ]
   }
 }

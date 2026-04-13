@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -13,7 +14,8 @@ import {
   Settings,
   Menu,
   X,
-  Wheat
+  Wheat,
+  Truck
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +24,7 @@ const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Disease Detection", href: "/dashboard/disease", icon: Bug },
   { name: "Yield Prediction", href: "/dashboard/yield", icon: BarChart3 },
+  { name: "Farm Services", href: "/dashboard/services", icon: Truck },
   { name: "Carbon Credits", href: "/dashboard/carbon", icon: Leaf },
   { name: "Market Intelligence", href: "/dashboard/market", icon: Store },
   { name: "FPO Portal", href: "/dashboard/fpo", icon: Users },
