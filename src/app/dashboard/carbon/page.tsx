@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import {
   TrendingUp,
   Globe
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function CarbonCreditsPage() {
   return (

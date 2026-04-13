@@ -1,14 +1,16 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser } from '@/firebase';
-import { initiateEmailSignIn, initiateEmailSignUp } from '@/firebase/non-blocking-login';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Leaf, Loader2 } from 'lucide-react';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { toast } from '@/hooks/use-toast';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -25,19 +27,26 @@ export default function AuthPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    if (isLogin) {
-      initiateEmailSignIn(auth, email, password);
-    } else {
-      initiateEmailSignUp(auth, email, password);
+    try {
+      if (isLogin) {
+        await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        await createUserWithEmailAndPassword(auth, email, password);
+      }
+      // Successful login/signup will be handled by the useEffect redirect
+    } catch (error: any) {
+      console.error("Auth Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Authentication Failed",
+        description: error.message || "Please check your credentials and try again.",
+      });
+      setIsLoading(false);
     }
-    
-    // Non-blocking call, we wait for the auth state listener in useEffect
-    // or a potential error handled by a global listener.
-    // For MVP, we'll give it a moment or rely on the redirect.
   };
 
   if (isUserLoading) {
@@ -97,7 +106,7 @@ export default function AuthPage() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex flex-col gap-2">
           <Button 
             variant="link" 
             className="w-full text-sm text-muted-foreground"
