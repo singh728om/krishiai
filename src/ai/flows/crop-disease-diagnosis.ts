@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI agent for detecting crop diseases from a photo and providing treatment recommendations.
@@ -24,9 +25,9 @@ export type CropDiseaseDiagnosisInput = z.infer<typeof CropDiseaseDiagnosisInput
 
 const CropDiseaseDiagnosisOutputSchema = z.object({
   diseaseName: z.string().describe('The name of the detected crop disease.'),
-  confidenceScore: z.number().min(0).max(100).describe('Confidence score of the diagnosis (0-100%).'),
+  confidenceScore: z.number().describe('Confidence score of the diagnosis (0-100).'),
   severity: z.enum(['Mild', 'Moderate', 'Severe']).describe('The severity of the disease.'),
-  affectedAreaPercentage: z.number().min(0).max(100).describe('The estimated percentage of the crop area affected by the disease (0-100%).'),
+  affectedAreaPercentage: z.number().describe('The estimated percentage of the crop area affected by the disease (0-100).'),
   treatmentMedicines: z.array(z.string()).describe('List of specific medicines or chemicals recommended for treatment.'),
   precautions: z.array(z.string()).describe('List of preventative measures and precautions to take.'),
   detailedAdvice: z.string().describe('Comprehensive actionable advice in the specified language.')
@@ -41,18 +42,20 @@ const prompt = ai.definePrompt({
   name: 'cropDiseaseDiagnosisPrompt',
   input: {schema: CropDiseaseDiagnosisInputSchema},
   output: {schema: CropDiseaseDiagnosisOutputSchema},
-  prompt: `You are an expert agricultural pathologist for KrishiAI, specializing in Indian crops. 
+  prompt: `You are an expert agricultural pathologist for KrishiAI, specializing in Indian crops and pests.
 
-Analyze this crop photo: {{media url=photoDataUri}}
+Analyze the symptoms shown in this crop photo carefully: {{media url=photoDataUri}}
 
 Your task:
-1. Identify the disease if present.
-2. Provide a confidence score.
-3. List specific medicines/fungicides/pesticides (treatmentMedicines).
-4. List long-term precautions to prevent recurrence (precautions).
-5. Provide a summary of actionable steps (detailedAdvice) in the language: {{{language}}}.
+1. Identify the specific disease or pest infestation.
+2. Provide a confidence percentage for your diagnosis.
+3. Categorize the severity as Mild, Moderate, or Severe.
+4. Estimate the percentage of the plant/field affected.
+5. Recommend specific medicines, fungicides, or organic treatments available in India.
+6. Provide long-term preventative measures.
+7. Give a detailed, actionable summary in the requested language: {{{language}}}.
 
-If the photo is not of a crop, identify that and set diseaseName to "Not a Crop".`,
+If the uploaded image is not a plant or crop, set diseaseName to "Not a Crop" and provide a score of 0.`,
 });
 
 const cropDiseaseDiagnosisFlow = ai.defineFlow(
@@ -62,10 +65,15 @@ const cropDiseaseDiagnosisFlow = ai.defineFlow(
     outputSchema: CropDiseaseDiagnosisOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    if (!output) {
-      throw new Error('Failed to get a valid diagnosis from the AI.');
+    try {
+      const {output} = await prompt(input);
+      if (!output) {
+        throw new Error('AI model returned an empty diagnosis.');
+      }
+      return output;
+    } catch (error: any) {
+      console.error('Genkit flow error:', error);
+      throw new Error(`AI Diagnosis failed: ${error.message}`);
     }
-    return output;
   }
 );
