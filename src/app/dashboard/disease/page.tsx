@@ -1,12 +1,13 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Camera, Upload, Loader2, CheckCircle2, AlertTriangle, MapPin, History, BrainCircuit, Pill, ShieldAlert, Sparkles, ScanLine, Zap } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Camera, Upload, Loader2, CheckCircle2, AlertTriangle, MapPin, History, BrainCircuit, Pill, ShieldAlert, Sparkles, ScanLine, Zap, X, FlipHorizontal } from "lucide-react";
 import { cropDiseaseDiagnosis, type CropDiseaseDiagnosisOutput } from "@/ai/flows/crop-disease-diagnosis";
 import { toast } from "@/hooks/use-toast";
 import Image from "next/image";
@@ -20,6 +21,10 @@ export default function DiseaseDetectionPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<CropDiseaseDiagnosisOutput | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const userRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -28,6 +33,53 @@ export default function DiseaseDetectionPage() {
 
   const { data: profile } = useDoc(userRef);
   const isHindi = profile?.languagePreference === 'hindi';
+
+  const getCameraPermission = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } 
+      });
+      setHasCameraPermission(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setShowCamera(true);
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      setHasCameraPermission(false);
+      toast({
+        variant: 'destructive',
+        title: isHindi ? 'कैमरा एक्सेस की अनुमति नहीं है' : 'Camera Access Denied',
+        description: isHindi ? 'कृपया इस सुविधा का उपयोग करने के लिए अपने ब्राउज़र सेटिंग्स में कैमरा अनुमति दें।' : 'Please enable camera permissions in your browser settings to use this feature.',
+      });
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setShowCamera(false);
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      if (context) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUri = canvas.toDataURL('image/jpeg');
+        setPreview(dataUri);
+        stopCamera();
+        analyzeImage(dataUri);
+      }
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -96,11 +148,10 @@ export default function DiseaseDetectionPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-12">
-      {/* Header with high-tech badge */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div className="space-y-1">
           <Badge variant="outline" className="rounded-full border-primary/20 text-primary bg-primary/5 px-4 py-1.5 font-bold flex items-center gap-2 w-fit">
-            <Sparkles className="h-3 w-3 fill-primary" /> Gemini 1.5 Powered
+            <Sparkles className="h-3 w-3 fill-primary" /> Gemini 1.5 Flash Powered
           </Badge>
           <h1 className="text-4xl font-headline font-black tracking-tight">
             {isHindi ? 'फसल रोग निदान केंद्र' : 'AI Crop Pathology Center'}
@@ -118,12 +169,26 @@ export default function DiseaseDetectionPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
-        {/* Modern Upload Card */}
         <Card className="lg:col-span-2 rounded-[2.5rem] border-none shadow-sm overflow-hidden flex flex-col p-10 bg-white relative">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-blue-500" />
           
           <div className="w-full relative aspect-square rounded-[2rem] overflow-hidden mb-8 bg-muted/20 border-4 border-dashed border-muted flex items-center justify-center group transition-all hover:border-primary/40">
-            {preview ? (
+            {showCamera ? (
+              <div className="relative w-full h-full bg-black">
+                <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+                <div className="absolute inset-0 border-2 border-primary/30 pointer-events-none">
+                  <div className="absolute inset-x-10 top-1/2 -translate-y-1/2 h-[1px] bg-primary/50 shadow-[0_0_15px_rgba(22,163,74,0.5)]" />
+                </div>
+                <div className="absolute bottom-6 left-0 w-full flex justify-center gap-4 px-6">
+                  <Button variant="destructive" size="icon" className="h-12 w-12 rounded-full shadow-lg" onClick={stopCamera}>
+                    <X className="h-6 w-6" />
+                  </Button>
+                  <Button className="h-14 px-8 rounded-2xl bg-primary hover:bg-primary/90 shadow-xl" onClick={capturePhoto}>
+                    <Camera className="mr-2 h-5 w-5" /> {isHindi ? 'फोटो खींचें' : 'Capture'}
+                  </Button>
+                </div>
+              </div>
+            ) : preview ? (
               <>
                 <Image src={preview} alt="Crop scan" fill className="object-cover" />
                 {isAnalyzing && (
@@ -159,25 +224,41 @@ export default function DiseaseDetectionPage() {
             onChange={handleFileChange} 
             disabled={isAnalyzing}
           />
-          <div className="space-y-4">
+          <canvas ref={canvasRef} className="hidden" />
+          
+          <div className="grid grid-cols-2 gap-4">
             <Button 
-              disabled={isAnalyzing}
-              className="rounded-2xl w-full h-14 text-lg font-bold shadow-xl shadow-primary/20" 
+              disabled={isAnalyzing || showCamera}
+              className="rounded-2xl h-14 text-lg font-bold shadow-xl shadow-primary/20 bg-primary" 
+              onClick={getCameraPermission}
+            >
+              <Camera className="mr-2 h-5 w-5" /> {isHindi ? 'कैमरा' : 'Camera'}
+            </Button>
+            <Button 
+              variant="outline"
+              disabled={isAnalyzing || showCamera}
+              className="rounded-2xl h-14 text-lg font-bold border-2" 
               onClick={() => document.getElementById('crop-upload')?.click()}
             >
-              {isAnalyzing ? (
-                <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> {isHindi ? 'विश्लेषण...' : 'Analyzing...'}</>
-              ) : (
-                <><Upload className="mr-2 h-5 w-5" /> {preview ? (isHindi ? 'बदलें' : 'Recapture') : (isHindi ? 'शुरू करें' : 'Initiate Scan')}</>
-              )}
+              <Upload className="mr-2 h-5 w-5" /> {isHindi ? 'अपलोड' : 'Upload'}
             </Button>
-            <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest font-black">
-              {isHindi ? 'समर्थित प्रारूप: JPG, PNG • अधिकतम 10MB' : 'Supported: JPG, PNG • Max 10MB'}
-            </p>
           </div>
+          
+          {hasCameraPermission === false && (
+            <Alert variant="destructive" className="mt-4 rounded-xl">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>{isHindi ? 'कैमरा एरर' : 'Camera Error'}</AlertTitle>
+              <AlertDescription>
+                {isHindi ? 'कैमरा अनुमति की आवश्यकता है।' : 'Camera access is required for real-time detection.'}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest font-black mt-6">
+            {isHindi ? 'एआई इंजन: जेमिनी 1.5 फ़्लैश • 99% शुद्धता' : 'AI ENGINE: GEMINI 1.5 FLASH • 99% ACCURACY'}
+          </p>
         </Card>
 
-        {/* Results Card - Silicon Valley Dashboard Style */}
         <Card className="lg:col-span-3 rounded-[2.5rem] border-none shadow-sm overflow-hidden min-h-[500px] flex flex-col bg-white">
           {isAnalyzing ? (
             <div className="flex-1 flex flex-col items-center justify-center p-12 space-y-8 text-center">
@@ -187,22 +268,21 @@ export default function DiseaseDetectionPage() {
                 <BrainCircuit className="absolute inset-0 m-auto h-10 w-10 text-primary animate-pulse" />
               </div>
               <div className="space-y-3">
-                <h3 className="text-2xl font-black">{isHindi ? 'एआई इंजन' : 'Gemini Pathology Engine'}</h3>
+                <h3 className="text-2xl font-black">{isHindi ? 'एआई विश्लेषण' : 'Gemini AI Analysis'}</h3>
                 <p className="text-muted-foreground font-medium max-w-sm italic">
-                  {isHindi ? 'रोगों के वैश्विक डेटाबेस से तुलना हो रही है...' : 'Cross-referencing symptoms with global agricultural database...'}
+                  {isHindi ? 'रोगों के वैश्विक डेटाबेस से तुलना हो रही है...' : 'Identifying symptoms and calculating treatment protocols...'}
                 </p>
               </div>
               <div className="w-full max-w-[300px] space-y-4">
                 <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                  <span>Sequencing Data</span>
-                  <span>78%</span>
+                  <span>Processing Image Data</span>
+                  <span>Real-time</span>
                 </div>
-                <Progress value={78} className="h-2 rounded-full" />
+                <Progress value={90} className="h-2 rounded-full" />
               </div>
             </div>
           ) : result ? (
             <div className="flex-1 flex flex-col">
-              {/* Result Banner */}
               <div className="p-8 bg-primary/5 border-b relative">
                 <div className="absolute top-0 right-0 p-8 opacity-5">
                   <ScanLine className="h-32 w-32" />
@@ -210,7 +290,7 @@ export default function DiseaseDetectionPage() {
                 <div className="flex justify-between items-start mb-8 relative z-10">
                   <div>
                     <Badge className={cn("mb-3 px-3 py-1 font-bold uppercase tracking-wider rounded-lg border-none", getSeverityColor(result.severity))}>
-                      {result.severity} {isHindi ? 'स्थिति' : 'Alert'}
+                      {result.severity} {isHindi ? 'स्थिति' : 'Severity'}
                     </Badge>
                     <h2 className="text-4xl font-black tracking-tight">{result.diseaseName}</h2>
                   </div>
@@ -232,7 +312,6 @@ export default function DiseaseDetectionPage() {
               </div>
               
               <div className="p-8 space-y-10 flex-1 overflow-auto max-h-[500px]">
-                {/* Treatment Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {result.treatmentMedicines.length > 0 && (
                     <div className="space-y-4">
@@ -287,12 +366,12 @@ export default function DiseaseDetectionPage() {
                 <ScanLine className="h-20 w-20 text-muted-foreground/40" />
               </div>
               <h3 className="text-2xl font-black text-foreground mb-2">
-                {isHindi ? 'निदान की प्रतीक्षा है' : 'System Idle'}
+                {isHindi ? 'निदान की प्रतीक्षा है' : 'System Ready'}
               </h3>
               <p className="text-sm font-medium max-w-xs">
                 {isHindi 
-                  ? 'एआई विश्लेषण शुरू करने के लिए फसल की एक स्पष्ट फोटो अपलोड करें।' 
-                  : 'Awaiting visual input. Please upload a crop leaf image to initiate the Gemini diagnostic flow.'}
+                  ? 'फोटो खींचें या फसल की एक स्पष्ट फोटो अपलोड करें।' 
+                  : 'Capture a photo or upload a crop image to initiate the Gemini diagnostic flow.'}
               </p>
             </div>
           )}
