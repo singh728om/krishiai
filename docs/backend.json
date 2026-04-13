@@ -24,6 +24,18 @@
           "type": "string",
           "description": "The primary phone number for communication and WhatsApp alerts."
         },
+        "village": {
+          "type": "string",
+          "description": "The village where the farmer is located."
+        },
+        "district": {
+          "type": "string",
+          "description": "The district where the farmer is located."
+        },
+        "pincode": {
+          "type": "string",
+          "description": "The postal code for the farmer's location."
+        },
         "languagePreference": {
           "type": "string",
           "description": "The preferred language for the application UI and content (e.g., 'Hindi', 'English', 'Marathi')."
@@ -60,6 +72,9 @@
         "name",
         "email",
         "phone",
+        "village",
+        "district",
+        "pincode",
         "languagePreference",
         "subscriptionPlan"
       ]
@@ -77,12 +92,13 @@
         "description": { "type": "string" },
         "village": { "type": "string" },
         "district": { "type": "string" },
+        "pincode": { "type": "string" },
         "pricePerHour": { "type": "number" },
         "contactPhone": { "type": "string" },
         "status": { "type": "string", "enum": ["Available", "Busy", "Maintenance"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "providerId", "equipmentType", "village", "pricePerHour", "contactPhone"]
+      "required": ["id", "providerId", "equipmentType", "village", "district", "pincode", "pricePerHour", "contactPhone"]
     },
     "LaborService": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -96,13 +112,14 @@
         "serviceType": { "type": "string", "enum": ["Sowing", "Harvesting", "Weeding", "Pesticide Spray", "General"] },
         "village": { "type": "string" },
         "district": { "type": "string" },
+        "pincode": { "type": "string" },
         "laborCount": { "type": "number" },
         "pricePerDayPerPerson": { "type": "number" },
         "contactPhone": { "type": "string" },
         "availability": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "providerId", "serviceType", "village", "pricePerDayPerPerson", "contactPhone"]
+      "required": ["id", "providerId", "serviceType", "village", "district", "pincode", "pricePerDayPerPerson", "contactPhone"]
     },
     "Farm": {
       "title": "Farm",
