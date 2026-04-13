@@ -2,143 +2,64 @@
 {
   "entities": {
     "UserProfile": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UserProfile",
       "type": "object",
       "description": "Represents a user of the KrishiAI platform, primarily a farmer. This entity stores profile information, not authentication credentials.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the UserProfile entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The full name of the farmer/user."
-        },
-        "email": {
-          "type": "string",
-          "description": "The primary email address for communication.",
-          "format": "email"
-        },
-        "phone": {
-          "type": "string",
-          "description": "The primary phone number for communication and WhatsApp alerts."
-        },
-        "village": {
-          "type": "string",
-          "description": "The village where the farmer is located."
-        },
-        "district": {
-          "type": "string",
-          "description": "The district where the farmer is located."
-        },
-        "pincode": {
-          "type": "string",
-          "description": "The postal code for the farmer's location."
-        },
-        "languagePreference": {
-          "type": "string",
-          "description": "The preferred language for the application UI and content (e.g., 'Hindi', 'English', 'Marathi')."
-        },
-        "notificationPreferences": {
-          "type": "array",
-          "description": "An array of preferred notification channels (e.g., 'WhatsApp', 'SMS', 'App').",
-          "items": {
-            "type": "string"
-          }
-        },
-        "subscriptionPlan": {
-          "type": "string",
-          "description": "The user's current subscription plan (e.g., 'Free', 'Farmer Pro', 'FPO/Cooperative')."
-        },
-        "farmIds": {
-          "type": "array",
-          "description": "References to Farm entities owned by this user.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "email",
-        "phone",
-        "village",
-        "district",
-        "pincode",
-        "languagePreference",
-        "subscriptionPlan"
-      ]
-    },
-    "EquipmentService": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "EquipmentService",
-      "type": "object",
-      "description": "A listing for farm equipment available for rent (e.g., Tractors, Harvesters).",
-      "properties": {
         "id": { "type": "string" },
-        "providerId": { "type": "string", "description": "UID of the service provider." },
-        "providerName": { "type": "string" },
-        "equipmentType": { "type": "string", "enum": ["Tractor", "Harvester", "Plough", "Seeder", "Other"] },
-        "description": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
         "village": { "type": "string" },
         "district": { "type": "string" },
         "pincode": { "type": "string" },
-        "pricePerHour": { "type": "number" },
-        "contactPhone": { "type": "string" },
-        "status": { "type": "string", "enum": ["Available", "Busy", "Maintenance"] },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "languagePreference": { "type": "string" },
+        "subscriptionPlan": { "type": "string" },
+        "farmIds": { "type": "array", "items": { "type": "string" } },
+        "role": { "type": "string", "enum": ["farmer", "internal_ops", "consumer"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "providerId", "equipmentType", "village", "district", "pincode", "pricePerHour", "contactPhone"]
+      "required": ["id", "name", "email", "phone"]
     },
-    "LaborService": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "LaborService",
+    "LeasePlot": {
+      "title": "LeasePlot",
       "type": "object",
-      "description": "A listing for agricultural labor groups or contractors.",
-      "properties": {
-        "id": { "type": "string" },
-        "providerId": { "type": "string" },
-        "contractorName": { "type": "string" },
-        "serviceType": { "type": "string", "enum": ["Sowing", "Harvesting", "Weeding", "Pesticide Spray", "General"] },
-        "village": { "type": "string" },
-        "district": { "type": "string" },
-        "pincode": { "type": "string" },
-        "laborCount": { "type": "number" },
-        "pricePerDayPerPerson": { "type": "number" },
-        "contactPhone": { "type": "string" },
-        "availability": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "providerId", "serviceType", "village", "district", "pincode", "pricePerDayPerPerson", "contactPhone"]
-    },
-    "Farm": {
-      "title": "Farm",
-      "type": "object",
+      "description": "A plot of land leased by the company for organic cultivation.",
       "properties": {
         "id": { "type": "string" },
         "ownerId": { "type": "string" },
+        "district": { "type": "string" },
+        "village": { "type": "string" },
+        "acreage": { "type": "number" },
+        "soilType": { "type": "string" },
+        "irrigation": { "type": "boolean" },
+        "annualRent": { "type": "number" },
+        "currentCrop": { "type": "string" },
+        "monitorId": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "Pending", "Under Inspection", "Expired"] },
+        "leaseStart": { "type": "string", "format": "date" },
+        "leaseEnd": { "type": "string", "format": "date" }
+      }
+    },
+    "StoreProduct": {
+      "title": "StoreProduct",
+      "type": "object",
+      "description": "Organic products sold through Harit Store.",
+      "properties": {
+        "id": { "type": "string" },
         "name": { "type": "string" },
-        "locationDistrict": { "type": "string" },
-        "locationState": { "type": "string" },
-        "acreage": { "type": "number" }
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "unit": { "type": "string" },
+        "originPlotId": { "type": "string" },
+        "stock": { "type": "number" },
+        "harvestDate": { "type": "string", "format": "date" }
       }
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
     "structure": [
@@ -147,23 +68,23 @@
         "definition": {
           "entityName": "UserProfile",
           "schema": { "$ref": "#/backend/entities/UserProfile" },
-          "description": "Stores individual user profile data."
+          "description": "User profiles."
         }
       },
       {
-        "path": "/equipmentServices/{serviceId}",
+        "path": "/leasePlots/{plotId}",
         "definition": {
-          "entityName": "EquipmentService",
-          "schema": { "$ref": "#/backend/entities/EquipmentService" },
-          "description": "Public listings for farm equipment services."
+          "entityName": "LeasePlot",
+          "schema": { "$ref": "#/backend/entities/LeasePlot" },
+          "description": "Company leased plots."
         }
       },
       {
-        "path": "/laborServices/{serviceId}",
+        "path": "/storeProducts/{productId}",
         "definition": {
-          "entityName": "LaborService",
-          "schema": { "$ref": "#/backend/entities/LaborService" },
-          "description": "Public listings for agricultural labor services."
+          "entityName": "StoreProduct",
+          "schema": { "$ref": "#/backend/entities/StoreProduct" },
+          "description": "Store inventory."
         }
       }
     ]
